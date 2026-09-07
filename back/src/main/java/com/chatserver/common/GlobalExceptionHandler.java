@@ -2,6 +2,8 @@ package com.chatserver.common;
 
 import com.chatserver.chatroom.exception.ChatRoomClosedException;
 import com.chatserver.chatroom.exception.ChatRoomNotFoundException;
+import com.chatserver.chatroom.exception.InvalidCursorException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -19,6 +21,18 @@ public class GlobalExceptionHandler {
 				.orElse("Invalid request");
 		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
 				.body(new ErrorResponse("VALIDATION_FAILED", details, null));
+	}
+
+	@ExceptionHandler(ConstraintViolationException.class)
+	public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ErrorResponse("VALIDATION_FAILED", ex.getMessage(), null));
+	}
+
+	@ExceptionHandler(InvalidCursorException.class)
+	public ResponseEntity<ErrorResponse> handleInvalidCursor(InvalidCursorException ex) {
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+				.body(new ErrorResponse(ex.getErrorCode(), ex.getMessage(), null));
 	}
 
 	@ExceptionHandler(ChatRoomNotFoundException.class)

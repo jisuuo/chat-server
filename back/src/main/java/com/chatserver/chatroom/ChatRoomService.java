@@ -1,8 +1,13 @@
 package com.chatserver.chatroom;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 
+import com.chatserver.chatroom.dto.ChatRoomListResponse;
+import com.chatserver.chatroom.dto.ChatRoomSummaryResponse;
 import com.chatserver.chatroom.exception.ChatRoomClosedException;
 import com.chatserver.chatroom.exception.ChatRoomNotFoundException;
 import org.springframework.stereotype.Service;
@@ -61,5 +66,41 @@ public class ChatRoomService {
 			room.close(OffsetDateTime.now());
 			chatRoomRepository.save(room);
 		}
+	}
+
+	@Transactional(readOnly = true)
+	public ChatRoomListResponse listMyRooms(String userId, String cursor, int limit) {
+		int limitPlusOne = limit + 1;
+		List<ChatRoomSummaryProjection> rows = (cursor == null)
+				? chatRoomRepository.findFirstPage(userId, limitPlusOne)
+				: queryNextPage(userId, cursor, limitPlusOne);
+
+		boolean hasMore = rows.size() > limit;
+		List<ChatRoomSummaryProjection> page = hasMore ? rows.subList(0, limit) : rows;
+
+		String nextCursor = hasMore
+				? ChatRoomListCursor.encode(
+						toOffsetDateTime(page.get(page.size() - 1).getSortAt()),
+						page.get(page.size() - 1).getId())
+				: null;
+
+		List<ChatRoomSummaryResponse> items = page.stream()
+				.map(r -> new ChatRoomSummaryResponse(
+						r.getId(),
+						r.getName(),
+						null,
+						toOffsetDateTime(r.getLastMessageAt())))
+				.toList();
+
+		return new ChatRoomListResponse(items, nextCursor);
+	}
+
+	private List<ChatRoomSummaryProjection> queryNextPage(String userId, String cursor, int limitPlusOne) {
+		ChatRoomListCursor.Cursor decoded = ChatRoomListCursor.decode(cursor);
+		return chatRoomRepository.findNextPage(userId, decoded.sortAt(), decoded.roomId(), limitPlusOne);
+	}
+
+	private OffsetDateTime toOffsetDateTime(Instant instant) {
+		return instant == null ? null : instant.atOffset(ZoneOffset.UTC);
 	}
 }
