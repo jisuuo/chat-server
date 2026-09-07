@@ -2,6 +2,8 @@ package com.chatserver.chatroom;
 
 import java.time.OffsetDateTime;
 
+import com.chatserver.chatroom.exception.ChatRoomClosedException;
+import com.chatserver.chatroom.exception.ChatRoomNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,5 +25,21 @@ public class ChatRoomService {
 		ChatRoom room = chatRoomRepository.save(new ChatRoom(name, creatorUserId, now));
 		chatRoomMemberRepository.save(new ChatRoomMember(room.getId(), creatorUserId, now));
 		return room;
+	}
+
+	@Transactional
+	public void join(Long roomId, String userId) {
+		ChatRoom room = chatRoomRepository.findByIdForUpdate(roomId)
+				.orElseThrow(() -> new ChatRoomNotFoundException(roomId));
+		if (room.isClosed()) {
+			throw new ChatRoomClosedException(roomId);
+		}
+		boolean alreadyActive = chatRoomMemberRepository
+				.findByChatRoomIdAndUserIdAndLeftAtIsNull(roomId, userId)
+				.isPresent();
+		if (alreadyActive) {
+			return;
+		}
+		chatRoomMemberRepository.save(new ChatRoomMember(roomId, userId, OffsetDateTime.now()));
 	}
 }

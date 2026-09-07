@@ -7,6 +7,7 @@ import com.chatserver.chatroom.dto.CreateChatRoomRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,5 +29,11 @@ public class ChatRoomController {
 		ChatRoom room = chatRoomService.createChatRoom(request.name(), principal.getName());
 		ChatRoomResponse body = new ChatRoomResponse(room.getId(), room.getName(), room.getCreatedAt());
 		return ResponseEntity.status(HttpStatus.CREATED).body(body);
+	}
+
+	@PostMapping("/{roomId}/join")
+	public ResponseEntity<Void> join(@PathVariable Long roomId, Principal principal) {
+		chatRoomService.join(roomId, principal.getName());
+		return ResponseEntity.ok().build();
 	}
 }
