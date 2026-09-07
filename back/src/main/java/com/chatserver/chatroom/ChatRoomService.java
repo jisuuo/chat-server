@@ -1,6 +1,7 @@
 package com.chatserver.chatroom;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 
 import com.chatserver.chatroom.exception.ChatRoomClosedException;
 import com.chatserver.chatroom.exception.ChatRoomNotFoundException;
@@ -41,5 +42,24 @@ public class ChatRoomService {
 			return;
 		}
 		chatRoomMemberRepository.save(new ChatRoomMember(roomId, userId, OffsetDateTime.now()));
+	}
+
+	@Transactional
+	public void leave(Long roomId, String userId) {
+		ChatRoom room = chatRoomRepository.findByIdForUpdate(roomId)
+				.orElseThrow(() -> new ChatRoomNotFoundException(roomId));
+		Optional<ChatRoomMember> active = chatRoomMemberRepository
+				.findByChatRoomIdAndUserIdAndLeftAtIsNull(roomId, userId);
+		if (active.isEmpty()) {
+			return;
+		}
+		active.get().leave(OffsetDateTime.now());
+		chatRoomMemberRepository.save(active.get());
+
+		long remaining = chatRoomMemberRepository.countByChatRoomIdAndLeftAtIsNull(roomId);
+		if (remaining == 0) {
+			room.close(OffsetDateTime.now());
+			chatRoomRepository.save(room);
+		}
 	}
 }
