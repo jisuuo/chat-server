@@ -14,6 +14,8 @@
 - `back/`: Spring Boot + Gradle 스캐폴딩 완료, 빌드 확인됨(`./gradlew build`).
 - `front/`: Vite 스캐폴딩 완료, 빌드 확인됨(`npm run build`).
 - `docker-compose.yml`: PostgreSQL 16 + Redis 7 기동 확인됨(`docker compose up -d`).
+  - 테스트는 별도 DB(`chatserver_test`)를 사용한다. `docker/init-db/`는 빈 볼륨에서만 자동 실행되므로, 이미 존재하는 볼륨이면 최초 1회
+    `docker compose exec postgres psql -U chatserver -d chatserver -c "CREATE DATABASE chatserver_test OWNER chatserver;"` 실행 필요.
 - 도메인 코드, API, WebSocket, Redis 연동 전부 미구현 — 아래 순서대로 시작.
 
 ## 구현 순서
