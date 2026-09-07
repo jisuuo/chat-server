@@ -6,6 +6,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/chatserver
     username: chatserver
     password: chatserver
+  sql:
+    init:
+      mode: always
   jpa:
     hibernate:
       ddl-auto: none
