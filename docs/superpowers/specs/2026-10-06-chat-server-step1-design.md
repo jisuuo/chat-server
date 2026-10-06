@@ -1,7 +1,7 @@
 # chat-server Step 1 설계 (단일 서버 + REST API + HTTP 폴링)
 
 - 작성일: 2026-10-06
-- 근거 기록: [`docs/adr.md`](../../adr.md) (ADR-001 ~ ADR-035)
+- 근거 기록: [`docs/adr.md`](../../adr.md) (ADR-001 ~ ADR-039)
 - 상태: 승인됨 (ADR-032)
 - ERD: [`docs/design/erd.md`](../../design/erd.md)
 
@@ -42,20 +42,23 @@ chat-server/
  └─ docs/
 ```
 
-### 백엔드 패키지 (`jissuo.chat`, 기능별)
+### 백엔드 패키지 (`jissuo.chat`, 기능별 + 4계층, ADR-036 ~ 039)
+
+도메인 용어, 규칙(R1~R7), 애그리거트 경계, 의존 방향은 [`docs/design/domain.md`](../../design/domain.md)를 따른다.
+
 ```
 jissuo.chat
- ├─ room/        RoomController, RoomService, RoomRepository, RoomMemberRepository
- │   └─ infra/jdbc/ JdbcRoomRepository, JdbcRoomMemberRepository
- ├─ message/     MessageController, MessageService, MessageRepository
- │   └─ infra/jdbc/ JdbcMessageRepository (스키마 A), JdbcMessageRepositoryB (스키마 B)
- ├─ auth/        AuthFilter, Authenticator, HeaderUserIdAuthenticator, AuthUser, @CurrentUser, ArgumentResolver
- ├─ audit/       감사 이벤트, 커밋 후 리스너, AUDIT 로거
- ├─ user/        DevUserController(@Profile local, bench), UserRepository
- │   └─ infra/jdbc/ JdbcUserRepository
- └─ common/      ApiResponse, ErrorCode, 전역 예외 처리(@RestControllerAdvice)
+ ├─ room/       domain/ (Room, RoomName, Membership, JoinBoundary, RoomRepository, MembershipRepository)
+ │              application/ (RoomService)  infra/jdbc/  api/ (RoomController, DTO)
+ ├─ message/    domain/ (Message, MessageContent, MessageCursor, MessageRepository)
+ │              application/ (MessageService)  infra/jdbc/ (스키마 A, B)  api/ (MessageController, DTO)
+ ├─ user/       domain/ application/ infra/jdbc/ api/ (DevUserController, @Profile local, bench)
+ ├─ auth/       AuthFilter, Authenticator, HeaderUserIdAuthenticator, AuthUser, @CurrentUser, ArgumentResolver
+ ├─ audit/      감사 이벤트 수신(커밋 후), AUDIT 로거
+ └─ common/     ApiResponse, ErrorCode, 전역 예외 처리(@RestControllerAdvice)
 ```
-- 서비스는 저장소 **인터페이스**에만 의존한다. 구현체는 설정 값으로 고른다 (ADR-024, 025).
+- 의존 방향: `api → application → domain ← infra`, 기능 사이는 `message → room`만, 상대의 `domain/`만 호출. ArchUnit 테스트로 검사.
+- 서비스는 저장소 **인터페이스**(`domain/`)에만 의존한다. 구현체는 설정 값으로 고른다 (ADR-024, 025).
   - `chat.repository=jdbc` (이후 `jpa` 추가)
   - `chat.message-schema=A|B` (스키마 비교용)
   - `chat.join-boundary=id|time` (입장 경계 비교용, 8장 F18)
@@ -170,6 +173,7 @@ jissuo.chat
 | F18 | 입장 경계: 시각(`joined_at`)과 id(`joined_message_id`) | ADR-009 커밋 순서 기준으로 유출/유실/불일치 건수 |
 | F19 | 마지막 나가기와 입장 경쟁 (실험용 방 삭제 구현) | 삭제된 방 입장, 고아 멤버 발생 여부, 해결책별 비교 |
 | F22 | 커밋 순서 역전으로 인한 영구 누락 (ADR-034, 장애 선행) | 동시 전송 중 폴링이 영구히 놓친 메시지 수, DB와 격리 수준별 |
+| F23 | 나가기와 메시지 전송의 경쟁 (ADR-037, 장애 선행) | 비멤버 메시지가 저장되는 횟수, DB와 격리 수준별 |
 | F20 | 방 목록 정렬 컬럼 갱신 경합 | 동시 전송 수에 따른 전송 p99, DB별 데드락 여부, PostgreSQL 인덱스 유무별 테이블 크기 |
 | DB 비교 | 워크로드 W1~W5 × 조건 C1~C4 | `docs/design/experiments.md`의 DB 비교 지표, 공정성 규칙 |
 

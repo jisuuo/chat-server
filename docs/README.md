@@ -11,7 +11,7 @@ HTTP 폴링에서 시작해 WebSocket, 다중 서버, Redis로 확장하며 채�
 
 ## 현재 상태
 
-- **2026-10-06**: 설계 완료 (ADR-001 ~ ADR-035), Step 1 설계 문서 승인. 다음: 계획 1(백엔드 핵심) 작성
+- **2026-10-06**: 설계 완료 (ADR-001 ~ ADR-039), Step 1 설계 문서 승인. 다음: 계획 1(백엔드 핵심) 작성
 - 진행 중인 단계: Step 1 (단일 서버 + REST API + HTTP 폴링), 구현 계획 1/5 준비
 
 ## 문서 지도
@@ -22,6 +22,7 @@ HTTP 폴링에서 시작해 WebSocket, 다중 서버, Redis로 확장하며 채�
 | [결정 기록 (ADR)](adr.md) | ADR-001 ~ | 누적 |
 | [장애 실험](failure-lab.md) | F1 ~, 상태 요약 | 누적 |
 | [아키텍처](design/architecture.md) | 인증, API, 공용 응답, 모니터링, 저장소 구조, 테스트 환경 | 누적 |
+| [도메인 정의](design/domain.md) | 용어, 규칙 R1~R7, 애그리거트 경계, 패키지 계층, 의존 방향 | 누적 |
 | [실험 설계](design/experiments.md) | DB 비교, 입장 경계, PK 스키마 | 누적 |
 | [ERD](design/erd.md) | IE 표기법 (`erd.png`, `erd.drawio`) | 누적 |
 | [Step 1 설계 문서](superpowers/specs/2026-10-06-chat-server-step1-design.md) | Step 1에서 만들 것 | 단계별 |
@@ -51,7 +52,7 @@ HTTP 폴링에서 시작해 WebSocket, 다중 서버, Redis로 확장하며 채�
 
 | Step | 내용 | 일부러 낼 장애 |
 |---|---|---|
-| 1 | 단일 서버 + REST API + HTTP 폴링 | F1, F2, F15, F16, F18, F19, F20, F22 |
+| 1 | 단일 서버 + REST API + HTTP 폴링 | F1, F2, F15, F16, F18, F19, F20, F22, F23 |
 | 2 | WebSocket으로 전환 | F3, F4, F5, F6 |
 | 3 | 서버 2대로 확장 | F7, F8, F17 |
 | 4 | Redis 도입 (Pub/Sub, 멤버 캐시) | F9, F10, F11 |
@@ -90,5 +91,7 @@ HTTP 폴링에서 시작해 WebSocket, 다중 서버, Redis로 확장하며 채�
 - Spring Security 도입 여부 → JWT 전환 시점에 재판단 (ADR-006)
 - 폴링 주기 → 부하 테스트의 변수로 측정 (Step 1, Step 6)
 - WebSocket 인증 방식 (query param / cookie / 첫 메시지) → Step 2
+- JPA 전환 시 도메인 객체와 JPA 엔티티를 분리할지 (ADR-038) → JPA 전환 시점
+- 방 목록 갱신(R7)을 이벤트 방식으로 바꿀지 (ADR-039) → Step 2~4
 - 전달 보장 원칙, 재시도 중복 방지, 격리 수준 통일, 커밋 순서 구멍 해결 → 장애 재현 후 보완 (ADR-034)
 - DB 자체 장애 대비(복제, 자동 전환) → 현재 어느 Step에도 없음. 고가용성 범위에 포함할지 Step 1 이후 결정
