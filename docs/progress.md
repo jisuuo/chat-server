@@ -17,7 +17,7 @@
 - 장애 실험 F18(입장 경계), F19(마지막 나가기와 입장의 경쟁)를 추가했다.
 - ERD 초안(IE 표기법)을 작성했다: [`erd.md`](erd.md), [`erd.png`](erd.png), [`erd.drawio`](erd.drawio)
 - 로컬 환경: JDK 21, Docker, Redis, MySQL 8.0, PostgreSQL, Gradle 설치를 확인했다.
-- 기록 방식: `docs/progress.md`에 먼저 기록하고, 노션에는 요청 시 한 번에 반영한다. (노션은 ADR-006까지 반영됨)
+- 기록 방식: `docs/progress.md`에 먼저 기록하고, 노션에는 요청 시 한 번에 반영한다. (2026-10-06 ADR-033까지 노션에 반영)
 
 ### 0. 설명 방식 회고 (협업 규칙)
 
@@ -504,3 +504,4 @@ db/
 - Spring Security 도입 여부 → JWT 전환 시점에 재판단 (ADR-006)
 - 폴링 주기 → 부하 테스트의 변수로 측정 (Step 1, Step 6)
 - WebSocket 인증 방식 (query param / cookie / 첫 메시지) → Step 2
+- 트랜잭션 범위와 메시지 저장 중 서버 장애 처리 (2026-10-06 질문) ← 논의 중
