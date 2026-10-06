@@ -1,11 +1,11 @@
 # chat-server Step 1 설계 (단일 서버 + REST API + HTTP 폴링)
 
 - 작성일: 2026-10-06
-- 근거 기록: [`docs/progress.md`](../../progress.md) (ADR-001 ~ ADR-032)
+- 근거 기록: [`docs/adr.md`](../../adr.md) (ADR-001 ~ ADR-035)
 - 상태: 승인됨 (ADR-032)
-- ERD: [`docs/erd.md`](../../erd.md)
+- ERD: [`docs/design/erd.md`](../../design/erd.md)
 
-이 문서는 Step 1에서 **무엇을 만들 것인가**만 정리한다. 각 결정의 이유와 포기한 것은 `progress.md`의 ADR 표에 있다.
+이 문서는 Step 1에서 **무엇을 만들 것인가**만 정리한다. 각 결정의 이유와 포기한 것은 `docs/adr.md`에, 상세 구조는 `docs/design/`에 있다.
 
 ---
 
@@ -144,7 +144,7 @@ jissuo.chat
 - 메트릭: Micrometer → `/actuator/prometheus` → Prometheus → Grafana.
 - 로그: JSON(ECS) → Filebeat → Elasticsearch(`app-*`, `audit-*`) → Kibana. 요청마다 추적 ID.
 - 감사 로그 대상: 방 생성, 입장, 나가기, 인증/인가 실패. 커밋 후 기록. 메시지 전송은 제외.
-- profile: 환경(`local`, `bench`, `prod`) × DB(`mysql`, `postgres`). 로그 레벨은 `progress.md` 11장 표를 따른다.
+- profile: 환경(`local`, `bench`, `prod`) × DB(`mysql`, `postgres`). 로그 레벨은 `docs/design/architecture.md`의 "환경(profile)과 로그 레벨" 표를 따른다.
 
 ---
 
@@ -171,7 +171,7 @@ jissuo.chat
 | F19 | 마지막 나가기와 입장 경쟁 (실험용 방 삭제 구현) | 삭제된 방 입장, 고아 멤버 발생 여부, 해결책별 비교 |
 | F22 | 커밋 순서 역전으로 인한 영구 누락 (ADR-034, 장애 선행) | 동시 전송 중 폴링이 영구히 놓친 메시지 수, DB와 격리 수준별 |
 | F20 | 방 목록 정렬 컬럼 갱신 경합 | 동시 전송 수에 따른 전송 p99, DB별 데드락 여부, PostgreSQL 인덱스 유무별 테이블 크기 |
-| DB 비교 | 워크로드 W1~W5 × 조건 C1~C4 | `progress.md` 6장 지표, 공정성 규칙 |
+| DB 비교 | 워크로드 W1~W5 × 조건 C1~C4 | `docs/design/experiments.md`의 DB 비교 지표, 공정성 규칙 |
 
 ---
 
