@@ -11,7 +11,7 @@ HTTP 요청  → AuthFilter (X-User-Id 헤더)    ┐                           
 WebSocket  → HandshakeInterceptor           ┘   지금: HeaderUserIdAuthenticator → WebSocketSession attributes
              (query/cookie, Step 2에서 결정)     나중: JwtAuthenticator
 
-[인가] "이 유저가 이 방의 멤버인가?"는 인증 층이 아니라 도메인 서비스(RoomMemberService)가 판단한다.
+[인가] "이 유저가 이 방의 멤버인가?"는 인증 층이 아니라 도메인(멤버십, R3)이 판단한다. 흐름은 MessageService가 맡는다 (ADR-037).
 ```
 
 - `Authenticator`는 `HttpServletRequest`에 의존하지 않는다. 문자열 credential만 받는다.
@@ -25,7 +25,7 @@ WebSocket  → HandshakeInterceptor           ┘   지금: HeaderUserIdAuthenti
 
 ## API 명세 (ADR-017)
 
-모든 요청에 `X-User-Id` 헤더 필요. 없거나 형식이 틀리면 401 (ADR-005).
+모든 요청에 `X-User-Id` 헤더 필요. 없거나 형식이 틀리면 401 (ADR-005). 실제 경로에는 `/api` 접두사가 붙고(ADR-032), `users`에 없는 사용자의 방 생성과 입장은 401이다(ADR-031). 최신 표는 Step 1 설계 문서를 따른다.
 
 | 기능 | Method & URL | 성공 | 주요 실패 |
 |---|---|---|---|
