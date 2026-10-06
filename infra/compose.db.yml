@@ -1,0 +1,56 @@
+# 두 DB를 같은 조건으로 띄운다 (DB 비교 공정성 규칙: 같은 CPU/메모리 제한, 같은 캐시 비율, 내구성 설정 일치)
+# 실행: docker compose -f infra/compose.db.yml up -d
+name: chat-db
+
+services:
+  mysql:
+    image: mysql:8.4.11
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_DATABASE: chat
+      MYSQL_USER: chat
+      MYSQL_PASSWORD: chat
+      MYSQL_ROOT_PASSWORD: root
+      TZ: UTC
+    command:
+      - --innodb-flush-log-at-trx-commit=1
+      - --innodb-buffer-pool-size=256M
+    cpus: 2
+    mem_limit: 1g
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uchat", "-pchat"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  postgres:
+    image: postgres:18.6
+    ports:
+      - "15432:5432"
+    environment:
+      POSTGRES_DB: chat
+      POSTGRES_USER: chat
+      POSTGRES_PASSWORD: chat
+      TZ: UTC
+    command:
+      - postgres
+      - -c
+      - synchronous_commit=on
+      - -c
+      - shared_buffers=256MB
+    cpus: 2
+    mem_limit: 1g
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "chat", "-d", "chat"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  mysql-data:
+  postgres-data:
