@@ -11,7 +11,7 @@
 - 과제 항목을 정리하고 엔지니어링 관점의 우선순위를 도출했다.
 - 진행 방식을 확정했다: 결정 → 구현 → 장애 재현 → 원인 분석 → 해결 → 기록.
 - 장애 실험(F1~F17)을 진행 방식에 포함했다.
-- ADR-001 ~ ADR-030을 결정했다. Step 1 구현 전 결정을 모두 마쳤다.
+- ADR-001 ~ ADR-032를 결정했다. Step 1 구현 전 결정을 모두 마쳤고 설계 문서를 승인받았다.
 - 모노레포 구조와 같은 주소(origin) 서비스 방식(개발 Vite proxy, 운영 nginx), 프론트 기술(React + TypeScript)을 정했다.
 - 공용 응답 `ApiResponse`와 모니터링 구성(Elasticsearch, Kibana, Prometheus, Grafana, 감사 로그)을 정했다.
 - 장애 실험 F18(입장 경계), F19(마지막 나가기와 입장의 경쟁)를 추가했다.
@@ -442,11 +442,13 @@ db/
 | 028 | **모노레포(`backend/`, `frontend/`, `infra/`, `db/`, `docs/`) + 같은 주소(origin)로 서비스**. 개발은 Vite 개발 서버가 `/api`를 백엔드로 proxy, 운영은 nginx가 정적 파일 제공과 API 전달을 함께 한다 | 한 변경으로 API와 화면을 함께 고칠 수 있다. 같은 주소면 CORS 차단과 커스텀 헤더(`X-User-Id`)로 인한 preflight(폴링 요청 두 배)가 없다. Step 3에서 도입할 nginx와 같은 구조라 개발과 운영의 차이가 작다 | 빌드 도구 2개(Gradle, npm), proxy 설정, 실제 IP를 위한 `X-Forwarded-For` 처리 |
 | 029 | **프론트엔드는 Vite + React + TypeScript** | 확장 가능성과 타입 안정성을 중시한다. 화면은 방 목록, 채팅방, 폴링과 WebSocket 비교 정도로 예상 (범위는 따로 결정) | 순수 TypeScript의 단순함 |
 | 030 | **테스트와 실행 환경**: Compose를 DB용(`compose.db.yml`)과 모니터링용(`compose.monitoring.yml`)으로 분리, DB 버전은 MySQL 8.4.11 + PostgreSQL 18.6 고정, 테스트용 SQL은 `db/{seed,bulk,queries}/{mysql,postgresql}`, 자동 테스트는 단위 / 통합(Testcontainers, 두 DB) / 실험(따로 실행) 3종류 | 두 DB를 같은 조건으로 비교해야 하고, 동시성 실험은 실제 DB에서만 재현된다. SQL을 앱과 분리해 다른 환경에서도 재사용한다. MySQL 8.4는 LTS로 알려져 있고 참고 자료가 많다 | 최신 MySQL(9.7 등)과의 비교, 테스트 속도(두 DB × 컨테이너 기동), Docker 상시 필요, DB별 대량 데이터 SQL 이중 작성 |
+| 031 | **사용자 생성: 개발용 API `POST /api/dev/users {nickname}`(local, bench 전용, `@Profile`) + seed/bulk SQL.** `X-User-Id`의 사용자가 `users`에 없으면 방 생성과 입장은 401 `UNAUTHENTICATED`. 방 존재를 먼저 확인(404)한 뒤의 FK 위반은 "사용자 없음"으로 본다 | 회원가입 API가 없어 `users`를 채울 방법이 필요하다. 화면 테스트와 시연은 API가 편하고(닉네임 입력으로 시작), 부하 테스트용 대량 사용자는 SQL이 빠르다. 방은 지우지 않으므로(ADR-012) 방 확인 후의 FK 위반은 사실상 사용자 없음이다 (예외: F19 실험) | 누구나 사용자를 만들 수 있는 API (운영에서는 등록하지 않음), JWT 도입 시 회원가입 흐름은 별도 설계 |
+| 032 | **Step 1 설계 문서 승인** (`docs/superpowers/specs/2026-10-06-chat-server-step1-design.md`). 문서에서 새로 정한 세부도 확정: API 경로 `/api` 접두사, 입장 경계값 = 입장 시점의 `rooms.last_message_id`(NULL이면 0), 입력 제한(방 이름 1~50자, 메시지 1~1000자, 메시지 조회 size 기본 50·최대 100, 방 목록 size 기본 20·최대 50), 구현체 선택 설정 값 `chat.repository`, `chat.message-schema`, `chat.join-boundary` | Vite proxy와 nginx가 `/api`만 전달한다. 입장 시 메시지 테이블을 다시 조회하지 않는다 (정확성은 F18에서 검증) | - |
 
 ### 15. 미결정 (다음에 의논)
 
 #### Step 1 구현 전에 정할 것
-- 없음 (2026-10-06 모두 결정). 다음: 설계 문서(spec) 정리 → 검토 → Step 1 구현 계획
+- 없음 (2026-10-06 모두 결정, 설계 문서 승인 ADR-032). 다음: Step 1 구현 계획
 
 #### 실험 또는 이후 단계에서 정할 것
 - 프론트 화면 범위 (방 목록, 채팅방, 폴링과 WebSocket 비교 화면 등)

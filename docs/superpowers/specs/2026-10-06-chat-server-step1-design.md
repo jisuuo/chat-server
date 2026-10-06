@@ -1,7 +1,8 @@
 # chat-server Step 1 설계 (단일 서버 + REST API + HTTP 폴링)
 
 - 작성일: 2026-10-06
-- 근거 기록: [`docs/progress.md`](../../progress.md) (ADR-001 ~ ADR-030)
+- 근거 기록: [`docs/progress.md`](../../progress.md) (ADR-001 ~ ADR-032)
+- 상태: 승인됨 (ADR-032)
 - ERD: [`docs/erd.md`](../../erd.md)
 
 이 문서는 Step 1에서 **무엇을 만들 것인가**만 정리한다. 각 결정의 이유와 포기한 것은 `progress.md`의 ADR 표에 있다.
@@ -16,7 +17,7 @@
 3. Step 1 실험(아래 8장)을 실행할 수 있는 코드, 데이터, 측정 환경을 갖춘다.
 
 ### 범위에 포함
-- 백엔드 API 6종 (방 생성, 방 목록, 입장, 나가기, 메시지 전송, 메시지 조회)
+- 백엔드 API 6종 (방 생성, 방 목록, 입장, 나가기, 메시지 전송, 메시지 조회) + 개발용 사용자 생성 API
 - MySQL과 PostgreSQL 동시 지원 (DB는 측정 후 결정, ADR-003)
 - messages 스키마 A/B 두 벌 (ADR-013)
 - 공용 응답 `ApiResponse`, 에러 코드, 감사 로그, 헬스 체크, 메트릭, 구조화 로그
@@ -50,6 +51,8 @@ jissuo.chat
  │   └─ infra/jdbc/ JdbcMessageRepository (스키마 A), JdbcMessageRepositoryB (스키마 B)
  ├─ auth/        AuthFilter, Authenticator, HeaderUserIdAuthenticator, AuthUser, @CurrentUser, ArgumentResolver
  ├─ audit/       감사 이벤트, 커밋 후 리스너, AUDIT 로거
+ ├─ user/        DevUserController(@Profile local, bench), UserRepository
+ │   └─ infra/jdbc/ JdbcUserRepository
  └─ common/      ApiResponse, ErrorCode, 전역 예외 처리(@RestControllerAdvice)
 ```
 - 서비스는 저장소 **인터페이스**에만 의존한다. 구현체는 설정 값으로 고른다 (ADR-024, 025).
@@ -82,12 +85,13 @@ jissuo.chat
 
 | 기능 | Method & URL | 성공 | 주요 실패 |
 |---|---|---|---|
-| 방 생성 (+ 생성자 자동 입장, 한 트랜잭션) | `POST /api/rooms` `{name}` | 201 | 400 |
+| 방 생성 (+ 생성자 자동 입장, 한 트랜잭션) | `POST /api/rooms` `{name}` | 201 | 400, 401 (없는 사용자) |
 | 방 목록 (최근 대화순) | `GET /api/rooms?cursor=…&size=20` | 200 | |
-| 방 입장 | `POST /api/rooms/{roomId}/members` | 201 | 404 `ROOM_NOT_FOUND`, 409 `ALREADY_MEMBER` |
+| 방 입장 | `POST /api/rooms/{roomId}/members` | 201 | 401 (없는 사용자), 404 `ROOM_NOT_FOUND`, 409 `ALREADY_MEMBER` |
 | 방 나가기 | `DELETE /api/rooms/{roomId}/members/me` | 200 (`data: null`) | 403 `NOT_A_MEMBER` |
 | 메시지 전송 | `POST /api/rooms/{roomId}/messages` `{content}` | 201 | 403 `NOT_A_MEMBER` |
 | 메시지 조회 | `GET /api/rooms/{roomId}/messages` + `after` 또는 `before` | 200 | 400 `INVALID_REQUEST`, 403 `NOT_A_MEMBER` |
+| 개발용 사용자 생성 (local, bench 전용) | `POST /api/dev/users` `{nickname}` | 201 | 400 |
 
 - URL 앞에 `/api`를 붙인다. 개발 중 Vite proxy와 운영 nginx가 `/api`만 백엔드로 전달하기 때문이다 (ADR-028).
 - 메시지 조회 응답은 항상 오래된 것 → 최신 순이고 `hasMore`를 포함한다 (ADR-017).
@@ -114,7 +118,7 @@ jissuo.chat
 ### 입장
 1. 방 존재 확인. 없으면 404.
 2. 경계값 결정: `joined_message_id` = 입장 시점의 `rooms.last_message_id`(NULL이면 0), `joined_at` = 현재 시각.
-3. `room_members` INSERT. 중복이면 409.
+3. `room_members` INSERT. 중복이면 409. FK 위반이면 사용자 없음으로 보고 401 (방은 1단계에서 확인했으므로).
 4. 커밋 후 감사 로그.
 
 ### 메시지 전송 (한 트랜잭션)
@@ -167,9 +171,9 @@ jissuo.chat
 
 ---
 
-## 9. 이 문서에서 새로 정한 세부 (검토 필요)
+## 9. 이 문서에서 새로 정한 세부 (확정, ADR-032)
 
-ADR에는 없지만 구현을 위해 이 문서에서 정한 것이다. 검토 후 확정한다.
+ADR에는 없던 것을 구현을 위해 이 문서에서 정했고, 검토 후 확정했다.
 
 1. **API 경로 앞에 `/api`** 를 붙인다.
 2. **입장 시 `joined_message_id`는 그 시점의 `rooms.last_message_id`** 로 정한다 (메시지 테이블 `MAX(id)` 조회 대신). 동시 전송 시 정확성은 F18에서 검증한다.
@@ -178,7 +182,8 @@ ADR에는 없지만 구현을 위해 이 문서에서 정한 것이다. 검토 �
 
 ## 10. 남은 미결정 (Step 1 진행 중 결정)
 
-1. **`users` 행은 누가 만드는가**: 회원가입 API가 없다. `X-User-Id`로 들어온 유저가 `users`에 없으면 입장 시 `room_members`의 FK(→ users)에서 실패한다. 선택지: (a) seed/bulk SQL로만 미리 생성하고, 없는 유저의 입장은 401로 응답 (b) 개발용 유저 생성 API 추가 (c) `room_members.user_id` FK 제거.
-2. 프론트 화면 범위.
-3. 입장/퇴장 알림 메시지 도입 여부.
-4. 방금 만든 방이 목록 맨 아래에 보이는 문제 보완 여부.
+1. 프론트 화면 범위.
+2. 입장/퇴장 알림 메시지 도입 여부.
+3. 방금 만든 방이 목록 맨 아래에 보이는 문제 보완 여부.
+
+(해결됨) 사용자 생성 방식: 개발용 API + seed/bulk SQL, 없는 사용자는 401 (ADR-031).
