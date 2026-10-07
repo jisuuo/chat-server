@@ -19,11 +19,11 @@
 - DB 이미지: `mysql:8.4.11`(포트 13306), `postgres:18.6`(포트 15432). 두 DB에 같은 CPU/메모리 제한을 두고 내구성 설정을 맞춘다 (`innodb_flush_log_at_trx_commit=1`, `synchronous_commit=on`)
 - URL 접두사 `/api`, 응답은 모두 `ApiResponse`, HTTP 상태 코드는 실제 결과대로
 - 에러 코드: `UNAUTHENTICATED` 401, `NOT_A_MEMBER` 403, `ROOM_NOT_FOUND` 404, `ALREADY_MEMBER` 409, `INVALID_REQUEST` 400, `INTERNAL_ERROR` 500(상세 숨김)
-- 입력 제한: 방 이름 1~50자, 메시지 1~1000자, 메시지 조회 size 기본 50·최대 100, 방 목록 size 기본 20·최대 50
+- 입력 제한: 방 이름 1~50자, 메시지 1~1000자, 메시지 조회 size 기본 50·최대 100, 방 목록 size 기본 20·최대 50. 글자 수는 코드 포인트로 센다 (ADR-048). 닉네임과 방 이름은 제어 문자와 짝 없는 서로게이트를 거절한다 (ADR-050, 메시지는 작업 8에서 정함)
 - 의존 방향: `api → application → domain ← infra`. 기능 사이에는 `message → room.domain`만 허용한다. `domain`은 Spring을 모른다
 - **장애 선행 (ADR-034)**: 격리 수준은 각 DB 기본값, 중복 방지 키 없음. F22(커밋 순서 역전)와 F23(나가기와 전송의 경쟁)은 **고치지 않는다**. 구현 중 새 위험을 발견하면 `failure-lab.md`에 가설로 적고 알리기만 한다
 
-## 이 계획에서 새로 정하는 세부 (검토 필요, 승인되면 작업 9 시점의 다음 ADR 번호로 기록. ADR-044·045는 작업 2, ADR-046·047은 작업 3 중에 사용)
+## 이 계획에서 새로 정하는 세부 (검토 필요, 승인되면 작업 9 시점의 다음 ADR 번호로 기록. ADR-044·045는 작업 2, ADR-046·047은 작업 3, ADR-048~050은 작업 4 중에 사용)
 설계 문서에 없어서 구현하려면 정해야 하는 것들이다.
 
 | # | 항목 | 제안 | 이유 |
@@ -100,7 +100,7 @@ backend/
 
 ### 작업 4. 사용자 (`user`, 개발용)
 - `Nickname`(1~50자), `UserRepository.save(Nickname, Instant) → long id`, `JdbcUserRepository`, `UserService`
-- `DevUserController` `POST /api/dev/users {nickname}` → 201 `{id, nickname}`. `@Profile({"local","bench"})`. 요청 DTO에 `@NotNull @Size(min=1, max=50)`을 달아 400을 먼저 낸다 (ADR-045)
+- `DevUserController` `POST /api/dev/users {nickname}` → 201 `{id, nickname}`. `@Profile({"local","bench"})`. 요청 DTO에 `@NotBlank @CodePointLength(max=50) @Pattern(regexp = Nickname.ALLOWED)`를 달아 400을 먼저 낸다 (ADR-045, ADR-048~050)
 - 테스트: 단위(`Nickname` 경계값 0/1/50/51자), 통합(두 DB 저장), API(local 프로필에서 201, 다른 프로필에서는 404)
 
 ### 작업 5. 방과 멤버십 도메인 + 저장소 (`room.domain`, `room.infra.jdbc`)
@@ -144,7 +144,7 @@ backend/
 - 인증 규칙 검사 (ADR-047, F24): `/api/**`(`/api/dev/**` 제외) 핸들러는 모두 `@CurrentUser AuthUser` 파라미터를 받는다. 필터가 우회됐을 때 리졸버가 두 번째로 막아 주려면 이 규칙이 지켜져야 한다
 - 문서
   - `docs/design/domain.md`: 규칙 표에 "테스트" 열을 채운다. 저장소 표기를 하나의 클래스로 고친다
-  - `docs/adr/{진행한 날짜}.md`: 다음 ADR 번호(이 계획에서 정한 세부. ADR-040~043은 작업 0~1, ADR-044·045는 작업 2, ADR-046·047은 작업 3 중에 사용)
+  - `docs/adr/{진행한 날짜}.md`: 다음 ADR 번호(이 계획에서 정한 세부. ADR-040~043은 작업 0~1, ADR-044·045는 작업 2, ADR-046·047은 작업 3, ADR-048~050은 작업 4 중에 사용)
   - `docs/README.md`의 현재 상태와 체크리스트 B, C(Redis 제외)를 갱신한다
   - `docs/journal/2026-10-06.md`(또는 진행한 날짜의 일지)
   - 이 계획을 `docs/superpowers/plans/2026-10-06-plan1-backend-core.md`에 저장한다
