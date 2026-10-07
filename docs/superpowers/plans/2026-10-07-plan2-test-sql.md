@@ -457,7 +457,7 @@ Expected: 4개 클래스의 `seed는_정합성_규칙을_지킨다`가 실패한
   - 방 목록 순서: 스터디 → 잡담방 → 빈 방
   - 민수가 잡담방을 조회하면: 잡담 4, 잡담 5
 
-- [ ] **Step 1: 실패하는 API 테스트 추가** (`DbScriptsContract`에 추가)
+- [x] **Step 1: 실패하는 API 테스트 추가** (`DbScriptsContract`에 추가)
 
 ```java
     @Test
@@ -482,7 +482,7 @@ Expected: 4개 클래스의 `seed는_정합성_규칙을_지킨다`가 실패한
 
 Run: `./gradlew test --tests 'jissuo.chat.sql.*'` → Expected: seed 파일이 없어 실패한다
 
-- [ ] **Step 2: `db/seed/base.sql`**
+- [x] **Step 2: `db/seed/base.sql`**
 
 ```sql
 -- 화면 확인용 소량 데이터. 두 DB 공용이다(세부 #8). 빈 DB에서 실행한다.
@@ -509,7 +509,7 @@ FROM rooms r JOIN users u
   OR (r.name = '빈 방' AND u.nickname = '민수');
 ```
 
-- [ ] **Step 3: `db/seed/messages_a.sql`**
+- [x] **Step 3: `db/seed/messages_a.sql`**
 
 ```sql
 -- 스키마 A(messages)용. base.sql 다음에 실행한다. 스키마 B면 messages_b.sql을 대신 실행한다 (ADR-041)
@@ -540,14 +540,14 @@ WHERE room_id = (SELECT id FROM rooms WHERE name = '잡담방')
 UPDATE rooms SET last_message_id = (SELECT MAX(m.id) FROM messages m WHERE m.room_id = rooms.id);
 ```
 
-- [ ] **Step 4: `db/seed/messages_b.sql`**: `messages_a.sql`을 복사하고 테이블 이름 `messages` 4곳(INSERT 대상, 두 서브쿼리, 마지막 UPDATE)을 `messages_b`로 바꾼다. 첫 주석은 `-- 스키마 B(messages_b)용. base.sql 다음에 실행한다. 스키마 A면 messages_a.sql을 대신 실행한다 (ADR-041)`이다.
+- [x] **Step 4: `db/seed/messages_b.sql`**: `messages_a.sql`을 복사하고 테이블 이름 `messages` 4곳(INSERT 대상, 두 서브쿼리, 마지막 UPDATE)을 `messages_b`로 바꾼다. 첫 주석은 `-- 스키마 B(messages_b)용. base.sql 다음에 실행한다. 스키마 A면 messages_a.sql을 대신 실행한다 (ADR-041)`이다.
 
-- [ ] **Step 5: 테스트 통과 확인**
+- [x] **Step 5: 테스트 통과 확인**
 
 Run: `./gradlew test --tests 'jissuo.chat.sql.*'` → Expected: 4조합 × 3개 테스트가 모두 PASS한다.
 그다음 `./gradlew test` 전체를 돌려 기존 테스트가 깨지지 않았는지 확인한다. TRUNCATE로 id가 다시 1부터 시작해도 다른 테스트는 id 값을 가정하지 않는다.
 
-- [ ] **Step 6: 세부 #2 확인 (스키마를 직접 만든 뒤 앱을 띄우면 실패하는가)** — 저장소 루트에서 실행한다
+- [x] **Step 6: 세부 #2 확인 (스키마를 직접 만든 뒤 앱을 띄우면 실패하는가)** — 저장소 루트에서 실행한다
 
 ```bash
 docker compose -f infra/compose.db.yml down -v && docker compose -f infra/compose.db.yml up -d --wait
@@ -556,7 +556,7 @@ docker compose -f infra/compose.db.yml exec -T mysql mysql -uchat -pchat chat < 
 ```
 Expected(예상): Flyway가 "비어 있지 않은 스키마에 이력 테이블이 없다"는 오류를 내고 기동에 실패한다. **실제 메시지를 보고서에 그대로 옮긴다.** PostgreSQL도 같은 방식으로 확인한다(`exec -T postgres psql -U chat -d chat -v ON_ERROR_STOP=1 < …/postgresql/V1__init.sql`, 프로필 `local,postgres`).
 
-- [ ] **Step 7: compose에서 수동 확인 (조합마다 반복)**
+- [x] **Step 7: compose에서 수동 확인 (조합마다 반복)**
 
 조합은 6가지다: MySQL-A, MySQL-B, PostgreSQL-A, PostgreSQL-B, MySQL-A + `--chat.join-boundary=time`, PostgreSQL-A + `--chat.join-boundary=time`. 조합마다 아래를 한다.
 ```bash
@@ -581,7 +581,7 @@ docker compose -f infra/compose.db.yml exec -T mysql mysql -uchat -pchat -t chat
 | 7 | 1번을 다시 실행 | 잡담방이 맨 위 |
 | 8 | `curl -s localhost:8080/api/rooms/2/messages -H 'X-User-Id: 3'` | 403 `NOT_A_MEMBER` |
 
-- [ ] **Step 8: 결과 보고서** — `docs/reports/2026-10-07-plan2-task2-seed.md`
+- [x] **Step 8: 결과 보고서** — `docs/reports/2026-10-07-plan2-task2-seed.md`
 
 아래 틀을 채운다. 측정하지 않은 칸은 "미실행"으로 적는다. **결과를 지어내지 않는다.**
 ```markdown
@@ -624,7 +624,7 @@ docker compose -f infra/compose.db.yml exec -T mysql mysql -uchat -pchat -t chat
 - {bulk(작업 3)에 그대로 쓸 수 있는 것, 바꿔야 할 것}
 ```
 
-- [ ] **Step 9: 보고하고 멈춘다** (보고서 경로와 요약을 포함한다)
+- [x] **Step 9: 보고하고 멈춘다** (보고서 경로와 요약을 포함한다)
 
 ---
 
@@ -634,7 +634,7 @@ docker compose -f infra/compose.db.yml exec -T mysql mysql -uchat -pchat -t chat
 - Create: `db/bulk/{mysql,postgresql}/{base,messages_a,messages_b}.sql`, `db/queries/{mysql,postgresql}/check_distribution.sql`
 - Modify: `DbScriptsContract.java` (bulk 테스트)
 
-- [ ] **Step 1: 실패하는 테스트 추가** (`DbScriptsContract`)
+- [x] **Step 1: 실패하는 테스트 추가** (`DbScriptsContract`)
 
 ```java
     @Test
@@ -655,7 +655,7 @@ docker compose -f infra/compose.db.yml exec -T mysql mysql -uchat -pchat -t chat
 ```
 Run → Expected: 파일이 없어 FAIL
 
-- [ ] **Step 2: `db/bulk/mysql/base.sql`**
+- [x] **Step 2: `db/bulk/mysql/base.sql`**
 
 ```sql
 -- 부하 측정용 공통 데이터: 사용자 1만, 방 1만, 멤버 6만8천 (세부 #6). 빈 DB에서 실행한다 (ADR-041).
@@ -685,7 +685,7 @@ FROM rooms r JOIN slots s
   ON s.j < CASE WHEN r.id <= 100 THEN 50 WHEN r.id <= 1000 THEN 20 ELSE 5 END;
 ```
 
-- [ ] **Step 3: `db/bulk/mysql/messages_a.sql`**
+- [x] **Step 3: `db/bulk/mysql/messages_a.sql`**
 
 ```sql
 -- 스키마 A(messages)에 메시지 @messages건을 넣는다. 실행: mysql --init-command="SET @messages=500000" … < messages_a.sql
@@ -721,9 +721,9 @@ UPDATE rooms SET last_message_id = (SELECT MAX(m.id) FROM messages m WHERE m.roo
 ANALYZE TABLE rooms, room_members, messages;
 ```
 
-- [ ] **Step 4: `db/bulk/mysql/messages_b.sql`**: `messages_a.sql`과 같다. 첫 주석의 "스키마 A(messages)"를 "스키마 B(messages_b)"로 바꾸고, 테이블 이름 `messages` 3곳(INSERT 대상, UPDATE 서브쿼리, ANALYZE)을 `messages_b`로 바꾼다.
+- [x] **Step 4: `db/bulk/mysql/messages_b.sql`**: `messages_a.sql`과 같다. 첫 주석의 "스키마 A(messages)"를 "스키마 B(messages_b)"로 바꾸고, 테이블 이름 `messages` 3곳(INSERT 대상, UPDATE 서브쿼리, ANALYZE)을 `messages_b`로 바꾼다.
 
-- [ ] **Step 5: `db/bulk/postgresql/base.sql`**
+- [x] **Step 5: `db/bulk/postgresql/base.sql`**
 
 ```sql
 -- 부하 측정용 공통 데이터: 사용자 1만, 방 1만, 멤버 6만8천 (세부 #6). 빈 DB에서 실행한다 (ADR-041).
@@ -741,7 +741,7 @@ FROM rooms r JOIN generate_series(0, 49) AS s(j)
   ON s.j < CASE WHEN r.id <= 100 THEN 50 WHEN r.id <= 1000 THEN 20 ELSE 5 END;
 ```
 
-- [ ] **Step 6: `db/bulk/postgresql/messages_a.sql`**
+- [x] **Step 6: `db/bulk/postgresql/messages_a.sql`**
 
 ```sql
 -- 스키마 A(messages)에 메시지 :messages건을 넣는다. 실행: psql -v ON_ERROR_STOP=1 -v messages=500000 -f messages_a.sql
@@ -769,9 +769,9 @@ UPDATE rooms SET last_message_id = (SELECT MAX(m.id) FROM messages m WHERE m.roo
 ANALYZE rooms, room_members, messages;
 ```
 
-- [ ] **Step 7: `db/bulk/postgresql/messages_b.sql`**: `messages_a.sql`과 같다. 첫 주석을 "스키마 B(messages_b)"로 바꾸고, 테이블 이름 3곳(INSERT 대상, UPDATE 서브쿼리, ANALYZE)을 `messages_b`로 바꾼다.
+- [x] **Step 7: `db/bulk/postgresql/messages_b.sql`**: `messages_a.sql`과 같다. 첫 주석을 "스키마 B(messages_b)"로 바꾸고, 테이블 이름 3곳(INSERT 대상, UPDATE 서브쿼리, ANALYZE)을 `messages_b`로 바꾼다.
 
-- [ ] **Step 8: `check_distribution.sql`** (MySQL과 PostgreSQL에 같은 내용으로 둔다)
+- [x] **Step 8: `check_distribution.sql`** (MySQL과 PostgreSQL에 같은 내용으로 둔다)
 
 ```sql
 -- bulk의 구간별 메시지 비율(세부 #6: 인기 50%, 중간 30%, 나머지 20%)을 확인한다
@@ -787,13 +787,13 @@ GROUP BY tier
 ORDER BY tier;
 ```
 
-- [ ] **Step 9: 테스트 통과 확인**
+- [x] **Step 9: 테스트 통과 확인**
 
 Run: `./gradlew test --tests 'jissuo.chat.sql.*'` → Expected: 4조합 × 4개 테스트가 PASS한다.
 - I4가 실패하면 INSERT … SELECT … ORDER BY k에서 id가 k 순서대로 붙지 않는다는 뜻이다. **SQL을 바꾸지 말고 멈춰서 보고한다.** 순서를 보장하는 방법은 사용자와 정한다.
 - 테스트 시간이 길면(조합당 30초 이상) 측정값을 보고한다.
 
-- [ ] **Step 10: 보고하고 멈춘다**
+- [x] **Step 10: 보고하고 멈춘다**
 
 ---
 
@@ -803,7 +803,7 @@ Run: `./gradlew test --tests 'jissuo.chat.sql.*'` → Expected: 4조합 × 4개 
 
 측정 조합은 실험 설계의 측정 매트릭스(`experiments.md`)를 따른다: MySQL-A, MySQL-B, PostgreSQL-A × 작은 크기(500,000), 큰 크기(5,000,000). 모두 6회다. PostgreSQL-B는 제외한다.
 
-- [ ] **Step 1: 조합마다 반복** (예: MySQL-A, 500,000)
+- [x] **Step 1: 조합마다 반복** (예: MySQL-A, 500,000)
 
 ```bash
 docker compose -f infra/compose.db.yml down -v && docker compose -f infra/compose.db.yml up -d --wait
@@ -816,12 +816,12 @@ docker compose -f infra/compose.db.yml exec -T mysql mysql -uchat -pchat -t chat
 PostgreSQL은 `exec -T postgres psql -U chat -d chat -v ON_ERROR_STOP=1 -v messages=500000 < db/bulk/postgresql/messages_a.sql` 형태로 실행한다.
 `sizes.sql`은 작업 5에서 만든다. 작업 4를 먼저 하면 작업 5의 Step 3~4(`sizes.sql`)를 먼저 만든다.
 
-- [ ] **Step 2: 결과 표**
+- [x] **Step 2: 결과 표**
 
 | DB-스키마 | 메시지 수 | base 시간 | messages 시간 | 메시지 테이블 데이터 MB | 인덱스 MB | 합계 MB | 버퍼(256MB) 대비 | 위반 0? |
 |---|---|---|---|---|---|---|---|---|
 
-- [ ] **Step 3: 판단 자료 보고**
+- [x] **Step 3: 판단 자료 보고**
   - "작은 크기는 버퍼 안, 큰 크기는 버퍼 밖"이 **측정으로** 맞았는지 보고한다.
   - 맞지 않으면 메시지 수 후보 2~3개와 추천안을 제시하고, 사용자가 정할 때까지 멈춘다.
   - 적재가 실패하거나 지나치게 느리면(예: 컨테이너 메모리 부족) 원인을 고치지 말고 그대로 보고한다. 필요하면 failure-lab에 가설로 적는다.
@@ -834,7 +834,7 @@ PostgreSQL은 `exec -T postgres psql -U chat -d chat -v ON_ERROR_STOP=1 -v messa
 - Create: `db/queries/{mysql,postgresql}/{explain_a,explain_b,sizes,cache_hit}.sql`
 - Modify: `DbScriptsContract.java` (실행 확인 테스트)
 
-- [ ] **Step 1: 실패하는 테스트**
+- [x] **Step 1: 실패하는 테스트**
 
 ```java
     @Test
@@ -848,7 +848,7 @@ PostgreSQL은 `exec -T postgres psql -U chat -d chat -v ON_ERROR_STOP=1 -v messa
     }
 ```
 
-- [ ] **Step 2: `db/queries/mysql/explain_a.sql`**
+- [x] **Step 2: `db/queries/mysql/explain_a.sql`**
 
 ```sql
 -- 앱(JdbcMessageRepository, JdbcRoomRepository)과 같은 SQL의 실행 계획. 앱 SQL이 바뀌면 함께 고친다.
@@ -874,7 +874,7 @@ ORDER BY (last_message_id IS NULL), last_message_id DESC, id DESC LIMIT 21;
 ```
 `explain_b.sql`: 같은 파일에서 `messages`(두 SET의 FROM과 EXPLAIN 4개의 FROM, 모두 6곳)를 `messages_b`로 바꾼다. 방 목록 EXPLAIN은 그대로 둔다.
 
-- [ ] **Step 3: `db/queries/postgresql/explain_a.sql`**
+- [x] **Step 3: `db/queries/postgresql/explain_a.sql`**
 
 ```sql
 -- 앱(JdbcMessageRepository, JdbcRoomRepository)과 같은 SQL의 실행 계획. 앱 SQL이 바뀌면 함께 고친다.
@@ -901,7 +901,7 @@ ORDER BY (last_message_id IS NULL), last_message_id DESC, id DESC LIMIT 21;
 ```
 `explain_b.sql`: `messages` 5곳(`\gset` 쿼리와 EXPLAIN 4개의 FROM)을 `messages_b`로 바꾼다.
 
-- [ ] **Step 4: `sizes.sql`**
+- [x] **Step 4: `sizes.sql`**
 
 MySQL (`db/queries/mysql/sizes.sql`):
 ```sql
@@ -943,7 +943,7 @@ SHOW shared_buffers;
 SELECT tablename, indexname, indexdef FROM pg_indexes WHERE schemaname = current_schema() ORDER BY tablename, indexname;
 ```
 
-- [ ] **Step 5: `cache_hit.sql`**
+- [x] **Step 5: `cache_hit.sql`**
 
 MySQL:
 ```sql
@@ -961,14 +961,14 @@ FROM pg_statio_user_tables
 ORDER BY relname;
 ```
 
-- [ ] **Step 6: 테스트 통과 확인** — `./gradlew test --tests 'jissuo.chat.sql.*'` → 4조합 모두 PASS
+- [x] **Step 6: 테스트 통과 확인** — `./gradlew test --tests 'jissuo.chat.sql.*'` → 4조합 모두 PASS
 
-- [ ] **Step 7: bulk 큰 크기에서 실행해 결과를 일지에 붙인다**
+- [x] **Step 7: bulk 큰 크기에서 실행해 결과를 일지에 붙인다**
   - 작업 4의 큰 크기 데이터에서 `explain_a.sql`(MySQL, PostgreSQL)과 `explain_b.sql`(MySQL)을 실행한다.
   - W2~W4가 `(room_id, id)` 인덱스(B는 PK)를 타는지, 방 목록이 전체 정렬을 하는지 적는다.
   - **인덱스를 타지 않는 경우가 보여도 고치지 않는다.** failure-lab의 F16(인덱스 부재로 인한 풀스캔)이나 F20(방 목록 정렬 컬럼 갱신 경합)에 관찰로 덧붙이거나, 새 가설로 적는다 (ADR-034).
 
-- [ ] **Step 8: 보고하고 멈춘다**
+- [x] **Step 8: 보고하고 멈춘다**
 
 ---
 
@@ -976,7 +976,7 @@ ORDER BY relname;
 
 **Files:** `db/README.md`, `docs/adr/{진행한 날}.md`, `docs/design/architecture.md`, `docs/design/experiments.md`, `docs/README.md`, `docs/collab-rules.md`, `docs/journal/{진행한 날}.md`, `CLAUDE.md`
 
-- [ ] **Step 1: `db/README.md`** — 다음 내용으로 쓴다 (작업 4에서 확정한 메시지 수를 반영한다)
+- [x] **Step 1: `db/README.md`** — 다음 내용으로 쓴다 (작업 4에서 확정한 메시지 수를 반영한다)
 
 ````markdown
 # 테스트용 SQL
@@ -1015,23 +1015,23 @@ docker compose -f infra/compose.db.yml exec -T postgres psql -U chat -d chat -v 
 사용자 1만, 방 1만. 방 id 1~100 인기(멤버 50, 메시지 50%), 101~1000 중간(멤버 20, 30%), 1001~10000 나머지(멤버 5, 20%). 난수를 쓰지 않아 두 DB에서 같은 데이터가 나온다.
 ````
 
-- [ ] **Step 2: ADR** — `docs/adr/{진행한 날}.md`에 다음 번호(ADR-054부터, 작성 시점의 마지막 번호를 확인한다)로 세부 #1~#8을 기록한다. 기존 표 형식(결정 | 이유 | 포기한 것)을 따르고, 작업 2·4에서 측정한 사실(예: #2의 실제 오류, #7의 확정값)을 이유에 적는다.
+- [x] **Step 2: ADR** — `docs/adr/{진행한 날}.md`에 다음 번호(ADR-054부터, 작성 시점의 마지막 번호를 확인한다)로 세부 #1~#8을 기록한다. 기존 표 형식(결정 | 이유 | 포기한 것)을 따르고, 작업 2·4에서 측정한 사실(예: #2의 실제 오류, #7의 확정값)을 이유에 적는다.
 
-- [ ] **Step 3: 설계 문서**
+- [x] **Step 3: 설계 문서**
   - `docs/design/architecture.md:148`: `seed/{mysql,postgresql}/` → `seed/` (두 DB 공용, ADR 번호)
   - `docs/design/experiments.md`의 "데이터:" 줄: 확정한 규모와 50/30/20 분포, `db/README.md` 링크
 
-- [ ] **Step 4: 상태와 규칙 문서**
+- [x] **Step 4: 상태와 규칙 문서**
   - `docs/README.md`의 현재 상태에 계획 2 완료를 적는다. 다음은 계획 3(관측)이다.
   - `docs/collab-rules.md`의 기록 문서 목록에 `reports/`(테스트 결과 보고서, 요청 시 작성)를 추가한다.
   - `CLAUDE.md`의 "현재 위치"와 "기록"에 `reports/`를 넣는다.
 
-- [ ] **Step 5: 일지** — `docs/journal/{진행한 날}.md`
+- [x] **Step 5: 일지** — `docs/journal/{진행한 날}.md`
   - 작업 4의 측정 표와 작업 5의 실행 계획 요약
   - 작업 2 보고서 링크
   - 미결정으로 넘기는 것: `room_members.user_id` 인덱스 차이를 DB 비교 조건으로 어떻게 다룰지(계획 5), MySQL과 PostgreSQL을 고르는 판정 규칙(계획 5 시작 전)
 
-- [ ] **Step 6: 최종 확인과 보고** — `./gradlew test` 전체 통과. 결과를 보고하고 커밋 여부를 묻는다.
+- [x] **Step 6: 최종 확인과 보고** — `./gradlew test` 전체 통과. 결과를 보고하고 커밋 여부를 묻는다.
 
 ---
 

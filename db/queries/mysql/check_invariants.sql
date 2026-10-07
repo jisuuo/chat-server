@@ -22,9 +22,10 @@ SELECT 'I4', COUNT(*) FROM (
 UNION ALL
 SELECT 'I5', (SELECT COUNT(*) = 0 FROM users) + (SELECT COUNT(*) = 0 FROM rooms) + (SELECT COUNT(*) = 0 FROM room_members)
 UNION ALL
+-- 다중 바이트 문자와 CHAR(0)를 문자열로 비교하면 MySQL에서 거짓 양성이 나므로 바이트로 비교한다.
 SELECT 'I6', (SELECT COUNT(*) FROM users WHERE CHAR_LENGTH(nickname) NOT BETWEEN 1 AND 50 OR nickname REGEXP '[[:cntrl:]]')
            + (SELECT COUNT(*) FROM rooms WHERE CHAR_LENGTH(name) NOT BETWEEN 1 AND 50 OR name REGEXP '[[:cntrl:]]')
-           + (SELECT COUNT(*) FROM all_messages WHERE CHAR_LENGTH(content) NOT BETWEEN 1 AND 1000 OR INSTR(content, CHAR(0)) > 0)
+           + (SELECT COUNT(*) FROM all_messages WHERE CHAR_LENGTH(content) NOT BETWEEN 1 AND 1000 OR INSTR(CAST(content AS BINARY), X'00') > 0)
 UNION ALL
 -- 재입장 멤버만 검사하므로 경계가 모두 0인 bulk에서는 이 조인이 비어 있다.
 SELECT 'I7', COUNT(*) FROM room_members rm JOIN all_messages m ON m.room_id = rm.room_id

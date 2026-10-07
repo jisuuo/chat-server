@@ -145,12 +145,12 @@ infra/
 ```
 db/
  ├─ README.md                   다른 환경에서 실행하는 방법
- ├─ seed/{mysql,postgresql}/    소량 샘플 데이터 (화면 확인용)
+ ├─ seed/                       두 DB 공용 소량 샘플 데이터 (화면 확인용, ADR-061)
  ├─ bulk/{mysql,postgresql}/    대량 데이터 생성 (부하 측정용, 인기 방 쏠림)
  └─ queries/{mysql,postgresql}/ 확인용 쿼리 (실행 계획, 테이블/인덱스 크기, 캐시 적중률)
 ```
 - 테이블 생성 SQL은 Flyway 폴더에 한 벌만 둔다. 다른 환경에서는 README 안내대로 그 파일을 순서대로 실행한다.
-- 대량 데이터 생성 문법은 DB별로 다르다 (PostgreSQL `generate_series`, MySQL 재귀 CTE).
+- 대량 데이터 생성 문법은 DB별로 다르다 (PostgreSQL `generate_series`, MySQL 숫자 CTE의 cross join, ADR-058).
 
 ### 자동 테스트 (3종류)
 | 종류 | DB | 언제 실행 | 예시 |
