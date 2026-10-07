@@ -1518,8 +1518,8 @@ body { margin: 0; }
 **Interfaces:**
 - Consumes: 작업 3·4·6·7의 접근 가능한 이름(`닉네임`, `새 사용자로 시작`, `방 이름`, `방 만들기`, `입장`, `메시지`, `보내기`, `나가기`, 목록 `대화`)
 
-- [ ] **Step 1: 설치** — `npm install --save-dev --save-exact @playwright/test` 후 `npx playwright install chromium` (브라우저 내려받기. 실행 전에 사용자에게 알린다)
-- [ ] **Step 2: `playwright.config.ts`**
+- [x] **Step 1: 설치** — `npm install --save-dev --save-exact @playwright/test` 후 `npx playwright install chromium` (브라우저 내려받기. 실행 전에 사용자에게 알린다)
+- [x] **Step 2: `playwright.config.ts`**
 
 ```ts
 import { defineConfig, devices } from '@playwright/test';
@@ -1543,7 +1543,7 @@ export default defineConfig({
   ],
 });
 ```
-- [ ] **Step 3: 테스트** `e2e/chat.spec.ts`
+- [x] **Step 3: 테스트** `e2e/chat.spec.ts`
 
 ```ts
 import { expect, test } from '@playwright/test';
@@ -1612,8 +1612,8 @@ test('비멤버가 방 링크를 열면 입장 버튼이 보이고 메시지는 
   await expect(c.getByText('비밀')).toHaveCount(0);
 });
 ```
-- [ ] **Step 4: 실행** — `docker compose -f infra/compose.db.yml up -d --wait` 후 `cd frontend && npm run e2e`. 두 테스트 PASS. 실패하면 trace를 보고 원인을 보고한다(테스트를 느슨하게 바꿔 통과시키지 않는다).
-- [ ] **Step 5: 확인** — `npm test`가 `e2e/`를 포함하지 않는지(작업 1의 `include`) 보고, 백엔드 `./gradlew test`도 그대로 통과하는지 확인한다. 결과를 보고하고 멈춘다.
+- [x] **Step 4: 실행** — `docker compose -f infra/compose.db.yml up -d --wait` 후 `cd frontend && npm run e2e`. 두 테스트 PASS. 실패하면 trace를 보고 원인을 보고한다(테스트를 느슨하게 바꿔 통과시키지 않는다).
+- [x] **Step 5: 확인** — `npm test`가 `e2e/`를 포함하지 않는지(작업 1의 `include`) 보고, 백엔드 `./gradlew test`도 그대로 통과하는지 확인한다. 결과를 보고하고 멈춘다.
 
 ---
 
