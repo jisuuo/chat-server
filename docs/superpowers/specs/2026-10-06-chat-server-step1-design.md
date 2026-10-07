@@ -1,11 +1,11 @@
 # chat-server Step 1 설계 (단일 서버 + REST API + HTTP 폴링)
 
 - 작성일: 2026-10-06
-- 근거 기록: [`docs/adr.md`](../../adr.md) (ADR-001 ~ ADR-039)
+- 근거 기록: [`docs/adr/2026-10-06.md`](../../adr/2026-10-06.md) (ADR-001 ~ ADR-039)
 - 상태: 승인됨 (ADR-032)
 - ERD: [`docs/design/erd.md`](../../design/erd.md)
 
-이 문서는 Step 1에서 **무엇을 만들 것인가**만 정리한다. 각 결정의 이유와 포기한 것은 `docs/adr.md`에, 상세 구조는 `docs/design/`에 있다.
+이 문서는 Step 1에서 **무엇을 만들 것인가**만 정리한다. 각 결정의 이유와 포기한 것은 `docs/adr/`(날짜별)에, 상세 구조는 `docs/design/`에 있다.
 
 ---
 

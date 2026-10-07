@@ -29,9 +29,9 @@
 - 자원: CPU, 메모리, 디스크 I/O, 테이블과 인덱스 크기
 
 ### 공정성 규칙
-- 두 DB에 같은 CPU와 메모리 제한 (Docker)
+- 두 DB에 같은 CPU와 메모리 제한 (Docker, 각 CPU 2개·메모리 1GB, ADR-040)
 - 내구성 설정 일치: MySQL `innodb_flush_log_at_trx_commit=1`, PostgreSQL `synchronous_commit=on`
-- 메모리 설정 비율 일치: `innodb_buffer_pool_size`와 `shared_buffers`
+- 메모리 설정 비율 일치: `innodb_buffer_pool_size`와 `shared_buffers` (둘 다 256M, 컨테이너 메모리의 25%, ADR-040)
 - warm-up 후 3회 측정, 중앙값 사용
 - 한계: Mac Docker는 VM 위에서 동작하므로 절대 수치가 아니라 상대 비교로만 해석한다.
 
@@ -74,6 +74,11 @@
 - (A) 단일 PK `id` + 보조 인덱스 `(room_id, id)`: 새 메시지는 항상 B-tree 오른쪽 끝에 추가된다 (쓰기 지역성 좋음).
 - (B) 복합 PK `(room_id, id)`: MySQL InnoDB에서 같은 방 메시지가 물리적으로 연속 저장된다 (읽기 지역성 좋음). 대신 쓰기 위치가 활성 방 수만큼 흩어진다 (페이지 분할, 메모리 압박, 랜덤 I/O).
 - 즉 (B)는 읽기를 빠르게 하는 대신 쓰기를 느리게 만드는 거래다. 읽기 속도만으로 결정하지 않는다.
+
+### 스키마 전환과 데이터 준비
+- A/B 스키마를 바꿀 때는 기존 DB 볼륨을 지우고 다시 띄운 뒤, 선택한 스키마에 동일한 대량 데이터를 새로 넣는다. `infra/compose.db.yml` 기준으로 `docker compose -f infra/compose.db.yml down -v` 후 `docker compose -f infra/compose.db.yml up -d --wait`를 실행한다.
+- 한 측정에서는 선택한 메시지 테이블만 채운다. `rooms`와 `room_members`도 매번 새로 만든 같은 조건의 데이터로 채운다. 데이터 양과 방별 분포를 맞춘 뒤 warm-up과 측정을 진행한다.
+- 기존 데이터를 둔 채 A에서 B로 설정만 바꾸면 `messages_b.id`는 1부터 시작하지만 `rooms.last_message_id`에는 A의 마지막 ID가 남는다. 이 경우 마지막 메시지 갱신과 재입장 경계가 잘못되어 B의 메시지가 보이지 않을 수 있다. 두 스키마의 데이터를 함께 쌓으면 메모리 초과 조건(C1)의 캐시 사용량도 달라져 비교가 오염된다.
 
 ### 가설: (A)에서는 PostgreSQL이 구조적으로 유리하다
 - PostgreSQL 보조 인덱스는 행의 물리적 위치(TID)를 직접 가리킨다.

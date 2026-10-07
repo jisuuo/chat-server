@@ -26,7 +26,7 @@ docker compose -f infra/compose.db.yml up -d --wait
 
 ## 아키텍처 (전체 그림)
 
-근거 문서: `docs/superpowers/specs/2026-10-06-chat-server-step1-design.md`(무엇을 만드는가), `docs/design/domain.md`(용어, 규칙 R1~R7, 의존 방향), `docs/design/architecture.md`(인증, API, 응답, 관측), `docs/adr.md`(결정 이유).
+근거 문서: `docs/superpowers/specs/2026-10-06-chat-server-step1-design.md`(무엇을 만드는가), `docs/design/domain.md`(용어, 규칙 R1~R7, 의존 방향), `docs/design/architecture.md`(인증, API, 응답, 관측), `docs/adr/YYYY-MM-DD.md`(결정 이유, 날짜별).
 
 - **패키지**: 기능별(`room`, `message`, `user`) × 4계층(`domain`, `application`, `infra/jdbc`, `api`) + 기술 관심사(`auth`, `audit`, `common`).
 - **의존 방향** (ArchUnit으로 검사): `api → application → domain ← infra`. `domain`은 Spring도 모른다. 기능 사이에는 `message → room.domain`만 허용한다(`RoomService` 호출 금지). `room`·`message`는 `user`를 모르고 `userId` 값과 DB FK로만 연결한다.
@@ -43,5 +43,5 @@ docker compose -f infra/compose.db.yml up -d --wait
 - **task는 하나씩 승인받고 시작한다.** 계획서를 승인받았다고 해서 실행까지 승인받은 것은 아니다. task가 끝나면 결과를 보여 주고 다음 task를 시작해도 되는지 묻는다.
 - **장애 선행 (ADR-034)**: 예상되는 문제는 `docs/failure-lab.md`에 가설로 기록만 하고, 코드로 미리 고치지 않는다(중복 방지 키, 격리 수준 변경, 잠금 순서 변경 등 금지). 격리 수준은 각 DB 기본값을 쓴다. F22(커밋 순서 역전)와 F23(나가기와 전송의 경쟁)은 의도적으로 열어 둔 문제다. 이미 ADR로 결정된 사항은 그대로 구현한다.
 - **결정은 사용자와 함께 한다.** 문서에 없는 값이나 세부는 혼자 정하지 말고 선택지 2~3개와 추천안을 제시한다. 기술 제안은 7단계 형식(한 줄 요약 → 문제 → 사용 화면의 변화 → 추천과 이유 → 비용과 위험 → 기술 근거 → 결정할 사항)으로 하고, 예상과 측정 결과를 구분한다. F·ADR 번호는 뜻을 먼저 풀어쓰고 괄호에 적는다.
-- **기록**: 원본은 로컬 `docs/`다. 누적 문서는 `README.md`, `adr.md`, `failure-lab.md`, `collab-rules.md`, `design/`이고, 날짜별 일지는 `journal/YYYY-MM-DD.md`다. 노션 동기화는 사용자가 요청할 때만 한다.
+- **기록**: 원본은 로컬 `docs/`다. 누적 문서는 `README.md`, `failure-lab.md`, `collab-rules.md`, `design/`이고, 날짜별 문서는 결정 기록 `adr/YYYY-MM-DD.md`와 일지 `journal/YYYY-MM-DD.md`다. 노션 동기화는 사용자가 요청할 때만 한다.
 - 커밋 메시지는 한국어로 쓰고 `chore:`/`docs:` 같은 접두사를 붙인다.
