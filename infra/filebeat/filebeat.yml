@@ -1,0 +1,35 @@
+filebeat.inputs:
+  - type: filestream
+    id: app
+    paths: ["/logs/app*.json"]
+    parsers:
+      - ndjson:
+          target: ""
+          overwrite_keys: true
+          add_error_key: true
+    fields:
+      log_type: app
+    fields_under_root: true
+  - type: filestream
+    id: audit
+    paths: ["/logs/audit*.json"]
+    parsers:
+      - ndjson:
+          target: ""
+          overwrite_keys: true
+          add_error_key: true
+    fields:
+      log_type: audit
+    fields_under_root: true
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  # ADR-023: 감사와 일반 로그의 보관 정책을 독립적으로 정할 수 있게 색인을 분리한다.
+  indices:
+    - index: "audit-%{+yyyy.MM.dd}"
+      when.equals:
+        log_type: audit
+    - index: "app-%{+yyyy.MM.dd}"
+
+setup.ilm.enabled: false
+setup.template.enabled: false

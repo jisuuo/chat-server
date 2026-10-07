@@ -1159,10 +1159,10 @@ JSON은 Grafana 화면에서 위 패널을 만든 뒤 "Export → Save to file"(
 - Modify: `infra/compose.monitoring.yml` (`logs` profile 추가)
 - Create: `infra/filebeat/filebeat.yml`
 
-- [ ] **Step 1: 이미지 버전 고정**
+- [x] **Step 1: 이미지 버전 고정**
 Elastic 공식 이미지(`docker.elastic.co/elasticsearch/elasticsearch`, `kibana`, `beats/filebeat`)의 최신 안정 패치를 확인한다. 세 이미지는 **같은 버전**이어야 한다. 날짜와 태그를 기록한다.
 
-- [ ] **Step 2: Compose에 추가**
+- [x] **Step 2: Compose에 추가**
 ```yaml
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:<Step 1 버전>
@@ -1211,7 +1211,7 @@ Elastic 공식 이미지(`docker.elastic.co/elasticsearch/elasticsearch`, `kiban
 ```
 `volumes:`에 `es-data:`, `filebeat-data:`를 추가한다.
 
-- [ ] **Step 3: Filebeat 설정** `infra/filebeat/filebeat.yml`
+- [x] **Step 3: Filebeat 설정** `infra/filebeat/filebeat.yml`
 ```yaml
 filebeat.inputs:
   - type: filestream
@@ -1251,7 +1251,7 @@ setup.ilm.enabled: false
 setup.template.enabled: false
 ```
 
-- [ ] **Step 4: 확인 (수동)**
+- [x] **Step 4: 확인 (수동)**
 1. `docker compose -f infra/compose.monitoring.yml --profile logs up -d --wait`
 2. `bootRun`(local,mysql) → 방 생성 1번, 헤더 없는 요청 1번
 3. `curl -s 'localhost:19200/_cat/indices/app-*,audit-*?v'` → 두 색인이 있다
@@ -1264,6 +1264,8 @@ setup.template.enabled: false
    ```
 5. Kibana Discover에서 `audit`의 `action : "ROOM_CREATED"`가 검색되고, 그 줄의 `requestId`로 `app`을 검색하면 같은 요청의 일반 로그가 나온다 (화면 캡처를 보고에 넣는다)
 6. 색인이 안 생기거나 `error.message`가 붙으면 결과를 그대로 보고하고 멈춘다
+
+확인 기록(2026-10-07): Elastic 세 이미지 모두 9.5.4로 고정했다. 기본 디스크 임계값에서는 Docker 볼륨 여유 공간 2.3GB 때문에 기본 샤드가 배치되지 않아, 로컬 단일 노드의 여유 공간 기준을 1GB/750MB/500MB로 설정했다. 이후 `app-*`와 `audit-*`에 문서가 수집됐고 `error.message`는 0건이었다. 새 방 생성 응답의 `requestId`로 `audit-*`의 `ROOM_CREATED` 1건과 `app-*`의 일반 로그 20건을 확인했다. Kibana 데이터 뷰 `app-*`, `audit-*`도 API로 등록·조회했다. 단일 노드에서 복제 샤드가 배치되지 않아 색인 상태는 yellow다. Discover 화면 캡처는 UI 자동화가 응답하지 않아 확보하지 못했으며 작업 7 보고서에 제한으로 남긴다.
 
 ---
 
