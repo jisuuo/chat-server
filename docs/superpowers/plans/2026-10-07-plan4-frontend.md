@@ -271,7 +271,7 @@ export function useHashRoute(): Route {
   - `apiFetch<T>(path, { method?, userId?, body? }): Promise<ApiResult<T>>`
   - `createUser(nickname)`, `listRooms(userId, cursor?)`, `createRoom(userId, name)`, `joinRoom(userId, roomId)`, `leaveRoom(userId, roomId)`, `sendMessage(userId, roomId, content)`, `readMessages(userId, roomId, query?: { after?: number; before?: number })` — 모두 `Promise<ApiResult<…>>`
 
-- [ ] **Step 1: 타입** `src/api/types.ts`
+- [x] **Step 1: 타입** `src/api/types.ts`
 
 ```ts
 // 백엔드 DTO와 같은 모양 (RoomResponse, MessageResponse 등). Instant는 ISO 문자열로 온다
@@ -287,7 +287,7 @@ export type Member = { roomId: number; userId: number };
 export type Message = { id: number; roomId: number; senderId: number; content: string; createdAt: string };
 export type MessagePage = { messages: Message[]; hasMore: boolean };
 ```
-- [ ] **Step 2: 실패하는 테스트** `src/api/client.test.ts`
+- [x] **Step 2: 실패하는 테스트** `src/api/client.test.ts`
 
 ```ts
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -394,8 +394,8 @@ describe('chat API 경로', () => {
   });
 });
 ```
-- [ ] **Step 3: 실패 확인** — `npm test` → 모듈 없음
-- [ ] **Step 4: 구현** `src/api/client.ts`
+- [x] **Step 3: 실패 확인** — `npm test` → 모듈 없음
+- [x] **Step 4: 구현** `src/api/client.ts`
 
 ```ts
 import type { ApiBody } from './types';
@@ -489,7 +489,7 @@ export function readMessages(userId: number, roomId: number, query: MessageQuery
 }
 ```
   (`chat.test.ts`에서 `readMessages(3, 1)` 호출 시 두 번째 인자가 `{ userId: 3 }`인지는 첫 테스트에서 검사하지 않는다. 경로만 본다.)
-- [ ] **Step 5: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
+- [x] **Step 5: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
 
 ---
 
