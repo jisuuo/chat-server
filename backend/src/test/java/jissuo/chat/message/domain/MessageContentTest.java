@@ -30,4 +30,11 @@ class MessageContentTest {
         assertThatThrownBy(() -> new MessageContent("앞\0뒤"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void 줄바꿈은_허용하고_짝_없는_서로게이트는_거절한다() {
+        assertThat(new MessageContent("첫 줄\n둘째 줄😀").value()).isEqualTo("첫 줄\n둘째 줄😀");
+        assertThatThrownBy(() -> new MessageContent("앞\ud800뒤"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
