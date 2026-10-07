@@ -23,4 +23,9 @@ public final class PostgresContainerSupport {
         registry.add("spring.datasource.username", CONTAINER::getUsername);
         registry.add("spring.datasource.password", CONTAINER::getPassword);
     }
+
+    /** db/ SQL을 컨테이너 안의 클라이언트로 실행하기 위해 노출한다 (계획 2). */
+    public static PostgreSQLContainer container() {
+        return CONTAINER;
+    }
 }
