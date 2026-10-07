@@ -1,0 +1,5 @@
+# ADR-022: 운영 환경은 외부 로그를 줄이고 loggers를 공개하지 않는다
+logging:
+  level:
+    root: WARN
+    jissuo.chat: INFO

@@ -228,7 +228,7 @@ Run: `./gradlew test` → 전체 PASS. `/actuator/**`는 `/api/`로 시작하지
 **Interfaces:**
 - Produces: 프로필 `bench`, `prod`. 계획 5의 부하 측정은 `--spring.profiles.active=bench,mysql`로 띄운다.
 
-- [ ] **Step 1: 실패하는 테스트 3개**
+- [x] **Step 1: 실패하는 테스트 3개**
 
 ```java
 package jissuo.chat.observe;
@@ -288,10 +288,10 @@ class LocalProfileTest {
 `ProdProfileTest`(`@ActiveProfiles({"prod","mysql"})`): `jissuo.chat`=INFO, root=WARN, `/actuator/loggers` 404.
 두 클래스는 위와 같은 모양으로 쓰고, `level(...)`은 `LocalProfileTest.level`을 부른다.
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 Run: `./gradlew test --tests 'jissuo.chat.observe.*ProfileTest'` → FAIL (레벨이 null, bench·prod 프로필 파일 없음)
 
-- [ ] **Step 3: 설정**
+- [x] **Step 3: 설정**
 `application-local.yml`의 첫 문서(공통 부분)에 추가한다:
 ```yaml
 logging:
@@ -352,7 +352,7 @@ logging:
     jissuo.chat: INFO
 ```
 
-- [ ] **Step 4: 통과 확인**
+- [x] **Step 4: 통과 확인**
 Run: `./gradlew test --tests 'jissuo.chat.observe.*'` → PASS. 이어서 `./gradlew test` 전체 PASS.
 (`DevUserControllerTest`는 이미 `local` 프로필이라 테스트 출력에 TRACE 로그가 늘어난다. 실패가 아니면 그대로 두고 보고에 적는다)
 

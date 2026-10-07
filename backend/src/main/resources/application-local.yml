@@ -1,4 +1,20 @@
 # infra/compose.db.yml 로 띄운 DB에 접속한다. DB 프로필(mysql, postgres)과 함께 쓴다
+logging:
+  level:
+    root: INFO
+    jissuo.chat: TRACE
+    # ADR-022: SQL, 바인딩 값, 커넥션 풀과 트랜잭션 로그만 실험용으로 연다
+    org.springframework.jdbc.core: TRACE
+    com.zaxxer.hikari: DEBUG
+    org.springframework.jdbc.support.JdbcTransactionManager: DEBUG
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,loggers
+  endpoint:
+    health:
+      show-details: always
 spring:
   datasource:
     username: chat

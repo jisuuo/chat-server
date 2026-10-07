@@ -1,0 +1,28 @@
+# ADR-022: 부하 측정 중 상세 로그가 측정값을 흔들지 않게 줄인다
+logging:
+  level:
+    root: WARN
+    jissuo.chat: INFO
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,loggers
+spring:
+  datasource:
+    username: chat
+    password: chat
+---
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: jdbc:mysql://localhost:13306/chat
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:15432/chat
