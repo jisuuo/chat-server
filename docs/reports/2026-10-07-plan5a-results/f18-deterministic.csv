@@ -1,0 +1,7 @@
+condition,old_visible,new_visible,equal_visible
+mysql-rr-id,false,true,true
+mysql-rc-id,false,true,true
+mysql-rc-time,true,false,false
+mysql-rr-time,true,false,false
+pg-rc-id,false,true,true
+pg-rc-time,true,false,false

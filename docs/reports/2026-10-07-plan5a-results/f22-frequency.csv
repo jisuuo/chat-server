@@ -1,0 +1,10 @@
+condition,writers,sent,polls,missed
+mysql-rr,1,921,3389,0
+mysql-rr,10,2435,5412,1
+mysql-rr,50,2976,5077,0
+mysql-rc,1,1695,8032,0
+mysql-rc,10,2438,5877,6
+mysql-rc,50,2192,3331,2
+pg-rc,1,3244,6604,0
+pg-rc,10,10776,6060,5913
+pg-rc,50,11607,4106,5683

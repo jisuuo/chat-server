@@ -1,0 +1,218 @@
+{
+  "db": "mysql",
+  "schema": "B",
+  "label": "official-mysql-b-500k-offset-index-on",
+  "room_1_messages": 2500,
+  "cases": [
+    {
+      "method": "offset",
+      "offset": 0,
+      "boundary": 500000,
+      "median_ms": 0.0641,
+      "runs": [
+        {
+          "ms": 0.109,
+          "plan": "-> Limit: 51 row(s)  (cost=508 rows=51) (actual time=0.0924..0.109 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0825..0.0973 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0459,
+          "plan": "-> Limit: 51 row(s)  (cost=508 rows=51) (actual time=0.0336..0.0459 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0328..0.0433 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0641,
+          "plan": "-> Limit: 51 row(s)  (cost=508 rows=51) (actual time=0.048..0.0641 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0468..0.0607 rows=51 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 ORDER BY id DESC LIMIT 51 OFFSET 0"
+    },
+    {
+      "method": "cursor",
+      "offset": 0,
+      "boundary": 500000,
+      "median_ms": 0.0821,
+      "runs": [
+        {
+          "ms": 0.111,
+          "plan": "-> Limit: 51 row(s)  (cost=1014 rows=51) (actual time=0.0944..0.111 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 500000))  (cost=1014 rows=5054) (actual time=0.0908..0.105 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 500000) (reverse)  (cost=1014 rows=5054) (actual time=0.042..0.0531 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0699,
+          "plan": "-> Limit: 51 row(s)  (cost=1014 rows=51) (actual time=0.0544..0.0699 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 500000))  (cost=1014 rows=5054) (actual time=0.0538..0.0672 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 500000) (reverse)  (cost=1014 rows=5054) (actual time=0.0515..0.0613 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0821,
+          "plan": "-> Limit: 51 row(s)  (cost=1014 rows=51) (actual time=0.0669..0.0821 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 500000))  (cost=1014 rows=5054) (actual time=0.0663..0.0795 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 500000) (reverse)  (cost=1014 rows=5054) (actual time=0.061..0.0708 rows=51 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 AND id<=500000 ORDER BY id DESC LIMIT 51"
+    },
+    {
+      "method": "offset",
+      "offset": 100,
+      "boundary": 480000,
+      "median_ms": 0.115,
+      "runs": [
+        {
+          "ms": 0.115,
+          "plan": "-> Limit/Offset: 51/100 row(s)  (cost=508 rows=51) (actual time=0.105..0.115 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0745..0.11 rows=151 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0823,
+          "plan": "-> Limit/Offset: 51/100 row(s)  (cost=508 rows=51) (actual time=0.0684..0.0823 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0387..0.0764 rows=151 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.134,
+          "plan": "-> Limit/Offset: 51/100 row(s)  (cost=508 rows=51) (actual time=0.124..0.134 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0902..0.128 rows=151 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 ORDER BY id DESC LIMIT 51 OFFSET 100"
+    },
+    {
+      "method": "cursor",
+      "offset": 100,
+      "boundary": 480000,
+      "median_ms": 0.136,
+      "runs": [
+        {
+          "ms": 0.136,
+          "plan": "-> Limit: 51 row(s)  (cost=966 rows=51) (actual time=0.119..0.136 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 480000))  (cost=966 rows=4814) (actual time=0.118..0.133 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 480000) (reverse)  (cost=966 rows=4814) (actual time=0.114..0.125 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0601,
+          "plan": "-> Limit: 51 row(s)  (cost=966 rows=51) (actual time=0.0452..0.0601 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 480000))  (cost=966 rows=4814) (actual time=0.0443..0.0569 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 480000) (reverse)  (cost=966 rows=4814) (actual time=0.0418..0.0513 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.181,
+          "plan": "-> Limit: 51 row(s)  (cost=966 rows=51) (actual time=0.166..0.181 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 480000))  (cost=966 rows=4814) (actual time=0.165..0.178 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 480000) (reverse)  (cost=966 rows=4814) (actual time=0.163..0.173 rows=51 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 AND id<=480000 ORDER BY id DESC LIMIT 51"
+    },
+    {
+      "method": "offset",
+      "offset": 1000,
+      "boundary": 300000,
+      "median_ms": 0.321,
+      "runs": [
+        {
+          "ms": 0.364,
+          "plan": "-> Limit/Offset: 51/1000 row(s)  (cost=508 rows=51) (actual time=0.355..0.364 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0221..0.317 rows=1051 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.321,
+          "plan": "-> Limit/Offset: 51/1000 row(s)  (cost=508 rows=51) (actual time=0.311..0.321 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0711..0.294 rows=1051 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.256,
+          "plan": "-> Limit/Offset: 51/1000 row(s)  (cost=508 rows=51) (actual time=0.247..0.256 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0176..0.231 rows=1051 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 ORDER BY id DESC LIMIT 51 OFFSET 1000"
+    },
+    {
+      "method": "cursor",
+      "offset": 1000,
+      "boundary": 300000,
+      "median_ms": 0.0395,
+      "runs": [
+        {
+          "ms": 0.0395,
+          "plan": "-> Limit: 51 row(s)  (cost=566 rows=51) (actual time=0.0245..0.0395 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 300000))  (cost=566 rows=2820) (actual time=0.0237..0.0368 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 300000) (reverse)  (cost=566 rows=2820) (actual time=0.0214..0.0307 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0446,
+          "plan": "-> Limit: 51 row(s)  (cost=566 rows=51) (actual time=0.0308..0.0446 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 300000))  (cost=566 rows=2820) (actual time=0.03..0.0417 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 300000) (reverse)  (cost=566 rows=2820) (actual time=0.0277..0.0362 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0354,
+          "plan": "-> Limit: 51 row(s)  (cost=566 rows=51) (actual time=0.0213..0.0354 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 300000))  (cost=566 rows=2820) (actual time=0.0207..0.0329 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 300000) (reverse)  (cost=566 rows=2820) (actual time=0.0185..0.0269 rows=51 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 AND id<=300000 ORDER BY id DESC LIMIT 51"
+    },
+    {
+      "method": "offset",
+      "offset": 1250,
+      "boundary": 250000,
+      "median_ms": 0.323,
+      "runs": [
+        {
+          "ms": 0.81,
+          "plan": "-> Limit/Offset: 51/1250 row(s)  (cost=508 rows=51) (actual time=0.774..0.81 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0378..0.749 rows=1301 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.321,
+          "plan": "-> Limit/Offset: 51/1250 row(s)  (cost=508 rows=51) (actual time=0.306..0.321 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0168..0.289 rows=1301 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.323,
+          "plan": "-> Limit/Offset: 51/1250 row(s)  (cost=508 rows=51) (actual time=0.309..0.323 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0172..0.29 rows=1301 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 ORDER BY id DESC LIMIT 51 OFFSET 1250"
+    },
+    {
+      "method": "cursor",
+      "offset": 1250,
+      "boundary": 250000,
+      "median_ms": 0.037,
+      "runs": [
+        {
+          "ms": 0.038,
+          "plan": "-> Limit: 51 row(s)  (cost=467 rows=51) (actual time=0.0204..0.038 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 250000))  (cost=467 rows=2328) (actual time=0.0198..0.0353 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 250000) (reverse)  (cost=467 rows=2328) (actual time=0.0176..0.0299 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.037,
+          "plan": "-> Limit: 51 row(s)  (cost=467 rows=51) (actual time=0.0199..0.037 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 250000))  (cost=467 rows=2328) (actual time=0.0192..0.0345 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 250000) (reverse)  (cost=467 rows=2328) (actual time=0.0169..0.0287 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0365,
+          "plan": "-> Limit: 51 row(s)  (cost=467 rows=51) (actual time=0.019..0.0365 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 250000))  (cost=467 rows=2328) (actual time=0.0184..0.034 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 250000) (reverse)  (cost=467 rows=2328) (actual time=0.0165..0.0288 rows=51 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 AND id<=250000 ORDER BY id DESC LIMIT 51"
+    },
+    {
+      "method": "offset",
+      "offset": 2449,
+      "boundary": 10200,
+      "median_ms": 0.912,
+      "runs": [
+        {
+          "ms": 0.912,
+          "plan": "-> Limit/Offset: 51/2449 row(s)  (cost=508 rows=51) (actual time=0.903..0.912 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0413..0.839 rows=2500 loops=1)\\n\n"
+        },
+        {
+          "ms": 1.65,
+          "plan": "-> Limit/Offset: 51/2449 row(s)  (cost=508 rows=51) (actual time=1.63..1.65 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.0902..1.54 rows=2500 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.607,
+          "plan": "-> Limit/Offset: 51/2449 row(s)  (cost=508 rows=51) (actual time=0.598..0.607 rows=51 loops=1)\\n    -> Index lookup on messages_b using PRIMARY (room_id=1) (reverse)  (cost=508 rows=5054) (actual time=0.021..0.549 rows=2500 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 ORDER BY id DESC LIMIT 51 OFFSET 2449"
+    },
+    {
+      "method": "cursor",
+      "offset": 2449,
+      "boundary": 10200,
+      "median_ms": 0.0329,
+      "runs": [
+        {
+          "ms": 0.0329,
+          "plan": "-> Limit: 51 row(s)  (cost=10.5 rows=51) (actual time=0.0149..0.0329 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 10200))  (cost=10.5 rows=51) (actual time=0.0143..0.0302 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 10200) (reverse)  (cost=10.5 rows=51) (actual time=0.0122..0.0247 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0348,
+          "plan": "-> Limit: 51 row(s)  (cost=10.5 rows=51) (actual time=0.0173..0.0348 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 10200))  (cost=10.5 rows=51) (actual time=0.0165..0.0318 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 10200) (reverse)  (cost=10.5 rows=51) (actual time=0.0105..0.0226 rows=51 loops=1)\\n\n"
+        },
+        {
+          "ms": 0.0318,
+          "plan": "-> Limit: 51 row(s)  (cost=10.5 rows=51) (actual time=0.015..0.0318 rows=51 loops=1)\\n    -> Filter: ((messages_b.room_id = 1) and (messages_b.id <= 10200))  (cost=10.5 rows=51) (actual time=0.0145..0.0293 rows=51 loops=1)\\n        -> Index range scan on messages_b using PRIMARY over (room_id = 1 AND id <= 10200) (reverse)  (cost=10.5 rows=51) (actual time=0.0121..0.024 rows=51 loops=1)\\n\n"
+        }
+      ],
+      "sql": "SELECT id,room_id,sender_id,content,created_at FROM messages_b WHERE room_id=1 AND id<=10200 ORDER BY id DESC LIMIT 51"
+    }
+  ]
+}

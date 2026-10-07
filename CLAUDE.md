@@ -8,7 +8,7 @@ HTTP 폴링 → WebSocket → 서버 2대 → Redis로 확장하는 채팅 서�
 
 - 기술: Java 21, Spring Boot 4.1.1, Gradle Kotlin DSL(단일 모듈, 패키지 `jissuo.chat`), `JdbcClient`, Flyway, MySQL 8.4.11 / PostgreSQL 18.6 (DB는 측정 후 선택, ADR-003)
 - 쓰지 않는 것: JPA(Step 1 실험 이후), Spring Security, H2(잠금·커밋 동작이 실제 DB와 달라서)
-- 현재 위치: Step 1(단일 서버 + REST + 폴링). 구현 계획 4(`docs/superpowers/plans/2026-10-07-plan4-frontend.md`) 완료, 다음은 계획 5
+- 현재 위치: Step 1(단일 서버 + REST + 폴링). 계획 5a·5b 완료. 정합성 실험은 `docs/reports/2026-10-07-plan5a-consistency.md`, 부하·DB 비교는 `docs/reports/2026-10-07-plan5b-load-db-comparison.md`에 있다. MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106).
 
 ## 명령어
 

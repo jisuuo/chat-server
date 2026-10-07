@@ -1,0 +1,19 @@
+{
+  "db": "mysql",
+  "schema": "B",
+  "initial_messages_room_1": 25000,
+  "initial_members_room_1": 50,
+  "measured_last_member": 1,
+  "client_transaction_seconds": 0.21540370899998607,
+  "before": {
+    "history_list_length": 7
+  },
+  "after": {
+    "history_list_length": 8
+  },
+  "remaining_messages_members_rooms": [
+    0,
+    0,
+    0
+  ]
+}

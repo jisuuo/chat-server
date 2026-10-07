@@ -1,0 +1,9 @@
+{
+  "peak": {
+    "active": 9.0,
+    "pending": 19.0,
+    "acquire_seconds_max": 0.18539575
+  },
+  "samples": 31,
+  "failures": 0
+}

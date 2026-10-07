@@ -1,0 +1,26 @@
+{
+  "captured_at_epoch": 1791368086.607162,
+  "db": {
+    "Innodb_buffer_pool_read_requests": 189638942,
+    "Innodb_buffer_pool_reads": 217961,
+    "Innodb_row_lock_time": 5918,
+    "Innodb_row_lock_waits": 1658
+  },
+  "hikari": {
+    "hikaricp_connections_acquire_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 1324927.0,
+    "hikaricp_connections_acquire_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 18027.734074417,
+    "hikaricp_connections_acquire_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.739688417,
+    "hikaricp_connections_active{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 10.0,
+    "hikaricp_connections_creation_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_creation_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_creation_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_idle{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 10.0,
+    "hikaricp_connections_min{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 10.0,
+    "hikaricp_connections_pending{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 169.0,
+    "hikaricp_connections_timeout_total{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_usage_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 1324927.0,
+    "hikaricp_connections_usage_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 1047.572,
+    "hikaricp_connections_usage_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.203
+  }
+}

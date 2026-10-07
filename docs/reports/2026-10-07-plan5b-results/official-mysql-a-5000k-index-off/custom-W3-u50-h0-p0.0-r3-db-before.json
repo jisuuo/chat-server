@@ -1,0 +1,26 @@
+{
+  "captured_at_epoch": 1791373331.113609,
+  "db": {
+    "Innodb_buffer_pool_read_requests": 430048533,
+    "Innodb_buffer_pool_reads": 1051491,
+    "Innodb_row_lock_time": 0,
+    "Innodb_row_lock_waits": 0
+  },
+  "hikari": {
+    "hikaricp_connections_acquire_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 2590934.0,
+    "hikaricp_connections_acquire_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 12037.52119124,
+    "hikaricp_connections_acquire_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 11.906855381,
+    "hikaricp_connections_active{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 10.0,
+    "hikaricp_connections_creation_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_creation_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_creation_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_idle{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 10.0,
+    "hikaricp_connections_min{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 10.0,
+    "hikaricp_connections_pending{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 40.0,
+    "hikaricp_connections_timeout_total{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_usage_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 2590934.0,
+    "hikaricp_connections_usage_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 3763.403,
+    "hikaricp_connections_usage_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 4.505
+  }
+}

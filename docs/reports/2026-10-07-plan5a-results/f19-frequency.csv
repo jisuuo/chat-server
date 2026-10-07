@@ -1,0 +1,8 @@
+condition,join,delete,room_exists,members,count,orphans
+mysql-rr,ok,DataIntegrityViolationException,1,2,985,0
+mysql-rr,UNAUTHENTICATED,deleted,0,0,15,0
+mysql-rc,UNAUTHENTICATED,deleted,0,0,6,0
+mysql-rc,ok,DataIntegrityViolationException,1,2,994,0
+pg-rc,ok,DataIntegrityViolationException,1,2,990,0
+pg-rc,ok,kept,1,1,1,0
+pg-rc,UNAUTHENTICATED,deleted,0,0,9,0

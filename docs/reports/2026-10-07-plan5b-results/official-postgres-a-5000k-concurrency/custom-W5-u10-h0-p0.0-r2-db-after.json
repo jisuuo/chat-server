@@ -1,0 +1,30 @@
+{
+  "captured_at_epoch": 1791370066.232033,
+  "db": {
+    "blks_read": 395273,
+    "blks_hit": 42896899,
+    "deadlocks": 0,
+    "temp_bytes": 1850942232,
+    "xact_commit": 529609,
+    "rooms_hot_updates": 27839,
+    "rooms_updates": 37844,
+    "rooms_dead_tuples": 142
+  },
+  "hikari": {
+    "hikaricp_connections_acquire_seconds_count{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 537694.0,
+    "hikaricp_connections_acquire_seconds_sum{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 0.4092086,
+    "hikaricp_connections_acquire_seconds_max{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 0.054737334,
+    "hikaricp_connections_active{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 3.0,
+    "hikaricp_connections_creation_seconds_count{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_creation_seconds_sum{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_creation_seconds_max{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_idle{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 7.0,
+    "hikaricp_connections_max{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 10.0,
+    "hikaricp_connections_min{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 10.0,
+    "hikaricp_connections_pending{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_timeout_total{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_usage_seconds_count{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 537694.0,
+    "hikaricp_connections_usage_seconds_sum{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 143.438,
+    "hikaricp_connections_usage_seconds_max{application=\"chat\",db=\"postgres\",pool=\"HikariPool-1\",schema=\"A\"}": 0.18
+  }
+}

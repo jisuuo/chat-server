@@ -1,0 +1,23 @@
+{
+  "db": "postgres",
+  "schema": "A",
+  "initial_messages_room_1": 25000,
+  "initial_members_room_1": 50,
+  "measured_last_member": 1,
+  "client_transaction_seconds": 0.40317891600000166,
+  "before": {
+    "dead_tuples": 0,
+    "deleted": 0,
+    "relation_bytes": 886030336
+  },
+  "after": {
+    "dead_tuples": 25000,
+    "deleted": 25000,
+    "relation_bytes": 886030336
+  },
+  "remaining_messages_members_rooms": [
+    0,
+    0,
+    0
+  ]
+}

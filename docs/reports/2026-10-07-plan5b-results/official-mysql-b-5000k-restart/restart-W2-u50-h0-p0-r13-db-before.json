@@ -1,0 +1,26 @@
+{
+  "captured_at_epoch": 1791375369.2817569,
+  "db": {
+    "Innodb_buffer_pool_read_requests": 4309321,
+    "Innodb_buffer_pool_reads": 68991,
+    "Innodb_row_lock_time": 0,
+    "Innodb_row_lock_waits": 0
+  },
+  "hikari": {
+    "hikaricp_connections_acquire_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 780712.0,
+    "hikaricp_connections_acquire_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 3303.967077351,
+    "hikaricp_connections_acquire_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.498858875,
+    "hikaricp_connections_active{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 7.0,
+    "hikaricp_connections_creation_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 30.0,
+    "hikaricp_connections_creation_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.346,
+    "hikaricp_connections_creation_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.04,
+    "hikaricp_connections_idle{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 3.0,
+    "hikaricp_connections_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 10.0,
+    "hikaricp_connections_min{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 10.0,
+    "hikaricp_connections_pending{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 34.0,
+    "hikaricp_connections_timeout_total{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_usage_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 780712.0,
+    "hikaricp_connections_usage_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 1059.887,
+    "hikaricp_connections_usage_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.156
+  }
+}

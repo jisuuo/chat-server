@@ -1,0 +1,4 @@
+run_id,db,schema,size,suite,workload,vus,hot_only,poll_seconds,repeat,requests,rps,errors,error_rate,p50_ms,p95_ms,p99_ms
+official-postgres-a-5000k-rooms-index-on,postgres,A,5000000,custom,W1,50,1,0.0,1,67370,2242.4089696625065,0,0,21.086,40.57464999999999,56.817479999999996
+official-postgres-a-5000k-rooms-index-on,postgres,A,5000000,custom,W1,50,1,0.0,2,67089,2235.0011663222112,0,0,21.207,41.2,57.25848
+official-postgres-a-5000k-rooms-index-on,postgres,A,5000000,custom,W1,50,1,0.0,3,70628,2352.912879026504,0,0,20.192,38.280649999999994,52.692

@@ -1,0 +1,35 @@
+{
+  "mysql_b_read_p99_ratios": {
+    "W2": 1.3424379429022468,
+    "W3": 1.2775364897850563,
+    "W4": 1.0378700197276514
+  },
+  "mysql_b_write_p99_ratio": 0.7923111849086033,
+  "mysql_b_adopt": false,
+  "db_comparison": {
+    "mysql": {
+      "schema": "A",
+      "w5_p99_ms": 62.50099999999998,
+      "w5_p99_range_ms": [
+        60.72654999999998,
+        68.82951999999999
+      ],
+      "w5_rps": 3360.9607757055883,
+      "w5_error_rate": 0.0,
+      "vu200_error_rate": 0.0
+    },
+    "postgres": {
+      "schema": "A",
+      "w5_p99_ms": 52.87259999999999,
+      "w5_p99_range_ms": [
+        51.54127,
+        56.711059999999996
+      ],
+      "w5_rps": 4965.759186549549,
+      "w5_error_rate": 0.0,
+      "vu200_error_rate": 0.0
+    }
+  },
+  "numeric_db_candidates": [],
+  "note": "ADR-101 also defers selection if repeat ranges overlap greatly; inspect ranges manually."
+}

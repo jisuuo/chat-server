@@ -1,0 +1,4 @@
+condition,tries,send_ok_leave_ok,send_403,violations,ordered_before_leave,ambiguous,other_errors,nonmember_messages
+mysql-rr,1000,998,2,9,0,989,0,998
+mysql-rc,1000,1000,0,6,0,994,0,1000
+pg-rc,1000,1000,0,993,0,7,0,1000

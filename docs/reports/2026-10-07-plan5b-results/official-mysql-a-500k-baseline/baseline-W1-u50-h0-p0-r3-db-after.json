@@ -1,0 +1,26 @@
+{
+  "captured_at_epoch": 1791362225.270231,
+  "db": {
+    "Innodb_buffer_pool_read_requests": 254011532,
+    "Innodb_buffer_pool_reads": 1254,
+    "Innodb_row_lock_time": 9329,
+    "Innodb_row_lock_waits": 2455
+  },
+  "hikari": {
+    "hikaricp_connections_acquire_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 2958702.0,
+    "hikaricp_connections_acquire_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 8919.016527348,
+    "hikaricp_connections_acquire_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.665375042,
+    "hikaricp_connections_active{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 10.0,
+    "hikaricp_connections_creation_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_creation_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_creation_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_idle{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 10.0,
+    "hikaricp_connections_min{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 10.0,
+    "hikaricp_connections_pending{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 39.0,
+    "hikaricp_connections_timeout_total{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.0,
+    "hikaricp_connections_usage_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 2958702.0,
+    "hikaricp_connections_usage_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 3527.651,
+    "hikaricp_connections_usage_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"A\"}": 0.546
+  }
+}

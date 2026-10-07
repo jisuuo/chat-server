@@ -1,0 +1,30 @@
+{
+  "before_off": {
+    "rooms_bytes": 1433600,
+    "rooms_total_bytes": 1933312,
+    "hot_updates": 0,
+    "updates": 10000,
+    "dead_tuples": 10000
+  },
+  "after_off": {
+    "rooms_bytes": 1605632,
+    "rooms_total_bytes": 2105344,
+    "hot_updates": 76544,
+    "updates": 87228,
+    "dead_tuples": 1073
+  },
+  "before_on": {
+    "rooms_bytes": 1605632,
+    "rooms_total_bytes": 2351104,
+    "hot_updates": 76544,
+    "updates": 87228,
+    "dead_tuples": 1073
+  },
+  "after_on": {
+    "rooms_bytes": 2277376,
+    "rooms_total_bytes": 4833280,
+    "hot_updates": 77312,
+    "updates": 176553,
+    "dead_tuples": 9309
+  }
+}

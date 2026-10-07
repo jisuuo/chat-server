@@ -1,0 +1,10 @@
+{
+  "db": "mysql",
+  "schema": "A",
+  "table": "messages",
+  "bytes": {
+    "data_bytes": 877658112,
+    "index_bytes": 162398208,
+    "total_bytes": 1040056320
+  }
+}

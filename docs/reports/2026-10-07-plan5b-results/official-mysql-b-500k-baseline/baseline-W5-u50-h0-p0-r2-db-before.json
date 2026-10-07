@@ -1,0 +1,26 @@
+{
+  "captured_at_epoch": 1791362625.926452,
+  "db": {
+    "Innodb_buffer_pool_read_requests": 48786766,
+    "Innodb_buffer_pool_reads": 2147,
+    "Innodb_row_lock_time": 1711,
+    "Innodb_row_lock_waits": 371
+  },
+  "hikari": {
+    "hikaricp_connections_acquire_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 2791952.0,
+    "hikaricp_connections_acquire_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 2804.505530243,
+    "hikaricp_connections_acquire_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.492060167,
+    "hikaricp_connections_active{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 9.0,
+    "hikaricp_connections_creation_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_creation_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_creation_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_idle{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 1.0,
+    "hikaricp_connections_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 10.0,
+    "hikaricp_connections_min{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 10.0,
+    "hikaricp_connections_pending{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 21.0,
+    "hikaricp_connections_timeout_total{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.0,
+    "hikaricp_connections_usage_seconds_count{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 2791952.0,
+    "hikaricp_connections_usage_seconds_sum{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 1998.029,
+    "hikaricp_connections_usage_seconds_max{application=\"chat\",db=\"mysql\",pool=\"HikariPool-1\",schema=\"B\"}": 0.49
+  }
+}

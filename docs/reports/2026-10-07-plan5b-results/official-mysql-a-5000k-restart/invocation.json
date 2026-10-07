@@ -1,0 +1,6 @@
+{
+  "db": "mysql",
+  "schema": "A",
+  "size": 5000000,
+  "run_id": "official-mysql-a-5000k-restart"
+}

@@ -1,0 +1,17 @@
+{
+  "db": "mysql",
+  "schema": "B",
+  "size": 5000000,
+  "suite": "custom",
+  "case": [
+    "W5:10:0:0",
+    "W5:200:0:0"
+  ],
+  "duration": "30s",
+  "warmup": "15s",
+  "repeats": 3,
+  "base_url": "http://localhost:18080",
+  "hot_room": 1,
+  "before_id": null,
+  "run_id": "official-mysql-b-5000k-concurrency"
+}

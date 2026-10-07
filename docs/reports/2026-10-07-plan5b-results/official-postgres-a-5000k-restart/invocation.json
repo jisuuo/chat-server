@@ -1,0 +1,6 @@
+{
+  "db": "postgres",
+  "schema": "A",
+  "size": 5000000,
+  "run_id": "official-postgres-a-5000k-restart"
+}

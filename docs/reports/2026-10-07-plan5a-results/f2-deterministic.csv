@@ -1,0 +1,4 @@
+condition,strict_first,strict_second,inclusive_second,id_second
+mysql-rc,[1999;2000],[],[1999;2000],[2001]
+mysql-rr,[2003;2004],[],[2003;2004],[2005]
+pg-rc,[1001;1002],[],[1001;1002],[1003]

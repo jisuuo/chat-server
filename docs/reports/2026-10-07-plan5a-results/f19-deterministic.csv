@@ -1,0 +1,7 @@
+condition,scenario,join,delete,room_exists,members,orphans
+mysql-rr,checked_then_deleted,UNAUTHENTICATED,true,0,0,0
+mysql-rr,count_then_join,ok,DataIntegrityViolationException,1,2,0
+mysql-rc,checked_then_deleted,UNAUTHENTICATED,true,0,0,0
+mysql-rc,count_then_join,ok,DataIntegrityViolationException,1,2,0
+pg-rc,checked_then_deleted,UNAUTHENTICATED,true,0,0,0
+pg-rc,count_then_join,ok,DataIntegrityViolationException,1,2,0

@@ -1,0 +1,10 @@
+{
+  "db": "postgres",
+  "schema": "A",
+  "table": "messages",
+  "bytes": {
+    "data_bytes": 886030336,
+    "index_bytes": 314638336,
+    "total_bytes": 1200914432
+  }
+}

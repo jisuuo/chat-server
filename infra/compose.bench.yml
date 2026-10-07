@@ -1,0 +1,75 @@
+# 별도 프로젝트와 볼륨을 써서 local DB의 데이터를 건드리지 않는다.
+name: chat-bench
+
+services:
+  mysql:
+    image: mysql:8.4.11
+    profiles: [mysql]
+    ports:
+      - "23306:3306"
+    environment:
+      MYSQL_DATABASE: chat
+      MYSQL_USER: chat
+      MYSQL_PASSWORD: chat
+      MYSQL_ROOT_PASSWORD: root
+      TZ: UTC
+    command:
+      - --innodb-flush-log-at-trx-commit=1
+      - --innodb-buffer-pool-size=256M
+    cpus: 2
+    mem_limit: 1g
+    volumes:
+      - bench-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: [CMD, mysqladmin, ping, -h, 127.0.0.1, -uchat, -pchat]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  postgres:
+    image: postgres:18.6
+    profiles: [postgres]
+    ports:
+      - "25432:5432"
+    environment:
+      POSTGRES_DB: chat
+      POSTGRES_USER: chat
+      POSTGRES_PASSWORD: chat
+      TZ: UTC
+    command:
+      - postgres
+      - -c
+      - synchronous_commit=on
+      - -c
+      - shared_buffers=256MB
+    cpus: 2
+    mem_limit: 1g
+    volumes:
+      - bench-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U chat -d chat"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    image: eclipse-temurin:21-jre
+    ports:
+      - "18080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: "bench,${BENCH_DB:-mysql}"
+      SPRING_DATASOURCE_URL: "${BENCH_JDBC_URL:-jdbc:mysql://mysql:3306/chat}"
+      SPRING_DATASOURCE_USERNAME: chat
+      SPRING_DATASOURCE_PASSWORD: chat
+      CHAT_MESSAGE_SCHEMA: "${BENCH_SCHEMA:-A}"
+      JAVA_TOOL_OPTIONS: "-XX:ActiveProcessorCount=2"
+      LOG_DIR: /app/logs
+    command: [java, -jar, /app/chat.jar]
+    cpus: 2
+    mem_limit: 1g
+    volumes:
+      - ../load/artifacts/chat-bench.jar:/app/chat.jar:ro
+
+volumes:
+  bench-mysql-data:
+  bench-postgres-data:

@@ -1,0 +1,17 @@
+{
+  "db": "mysql",
+  "schema": "B",
+  "messages": 500000,
+  "member_index": false,
+  "base_seconds": 0.583651917000001,
+  "messages_seconds": 5.595225583000001,
+  "invariants": {
+    "I1": 0,
+    "I2": 0,
+    "I3": 0,
+    "I4": 0,
+    "I5": 0,
+    "I6": 0,
+    "I7": 0
+  }
+}

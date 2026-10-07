@@ -1,0 +1,14 @@
+{
+  "db": "mysql",
+  "schema": "B",
+  "size": 500000,
+  "suite": "baseline",
+  "case": [],
+  "duration": "30s",
+  "warmup": "15s",
+  "repeats": 3,
+  "base_url": "http://localhost:18080",
+  "hot_room": 1,
+  "before_id": null,
+  "run_id": "official-mysql-b-500k-baseline"
+}

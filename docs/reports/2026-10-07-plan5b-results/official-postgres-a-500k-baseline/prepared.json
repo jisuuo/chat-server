@@ -1,0 +1,17 @@
+{
+  "db": "postgres",
+  "schema": "A",
+  "messages": 500000,
+  "member_index": true,
+  "base_seconds": 0.7498766250000006,
+  "messages_seconds": 3.445635375000002,
+  "invariants": {
+    "I1": 0,
+    "I2": 0,
+    "I3": 0,
+    "I4": 0,
+    "I5": 0,
+    "I6": 0,
+    "I7": 0
+  }
+}

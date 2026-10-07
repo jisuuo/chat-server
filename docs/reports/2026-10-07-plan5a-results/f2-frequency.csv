@@ -1,0 +1,10 @@
+condition,writers,sent,id_missed,time_gt_missed,time_ge_missed,time_ge_duplicates
+mysql-rc,1,2015,0,0,0,1727
+mysql-rc,10,2595,0,0,0,931
+mysql-rc,50,2789,0,0,0,547
+mysql-rr,1,1741,0,0,0,1653
+mysql-rr,10,2969,0,0,0,1022
+mysql-rr,50,2061,0,0,0,441
+pg-rc,1,4508,0,0,0,3148
+pg-rc,10,11008,3663,3708,3772,1202
+pg-rc,50,11359,5209,5214,5194,689
