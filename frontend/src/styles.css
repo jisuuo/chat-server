@@ -1,0 +1,16 @@
+:root { font-family: system-ui, sans-serif; color-scheme: light dark; }
+body { margin: 0; }
+.login, .app { max-width: 960px; margin: 0 auto; padding: 16px; }
+.login form, .rooms form, .conversation form { display: flex; gap: 8px; margin: 8px 0; }
+.top, .toolbar { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.rooms ul { list-style: none; padding: 0; }
+.rooms li { display: flex; gap: 8px; align-items: baseline; padding: 4px 0; }
+.room-body { display: grid; grid-template-columns: 1fr 240px; gap: 16px; }
+.messages { list-style: none; padding: 8px; margin: 0; height: 60vh; overflow-y: auto; border: 1px solid #8884; }
+.messages li { padding: 2px 0; }
+.sender { font-weight: 600; margin-right: 8px; }
+.panel { border: 1px solid #8884; padding: 8px; font-size: 13px; }
+.panel dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; margin: 8px 0 0; }
+.panel dd { margin: 0; word-break: break-all; }
+[role='alert'] { color: #c33; }
+@media (max-width: 640px) { .room-body { grid-template-columns: 1fr; } }

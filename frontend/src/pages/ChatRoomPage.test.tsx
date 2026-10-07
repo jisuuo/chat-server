@@ -138,4 +138,48 @@ describe('ChatRoomPage', () => {
     expect(chat.leaveRoom).toHaveBeenCalledWith(1, 1)
     expect(onBack).toHaveBeenCalled()
   })
+
+  it('폴링 패널에 커서를 보이고, 일시정지하면 폴링하지 않는다', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    vi.mocked(chat.readMessages).mockResolvedValue(page([msg(10)]))
+    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    const panel = within(await screen.findByRole('complementary', { name: '폴링 상태' }))
+    expect(panel.getByText('10')).toBeInTheDocument()
+
+    await user.click(panel.getByRole('button', { name: '일시정지' }))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS * 3)
+    })
+    expect(chat.readMessages).toHaveBeenCalledTimes(1)
+    expect(panel.getByRole('button', { name: '다시 시작' })).toBeInTheDocument()
+  })
+
+  it('진행 중 일시정지 후 재시작해도 늦은 응답은 커서를 바꾸지 않고 요청이 겹치지 않는다', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    let finishOldPoll!: (value: ReturnType<typeof page>) => void
+    let finishNewPoll!: (value: ReturnType<typeof page>) => void
+    vi.mocked(chat.readMessages)
+      .mockResolvedValueOnce(page([msg(10)]))
+      .mockImplementationOnce(() => new Promise((resolve) => { finishOldPoll = resolve }))
+      .mockImplementationOnce(() => new Promise((resolve) => { finishNewPoll = resolve }))
+    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    const panel = within(await screen.findByRole('complementary', { name: '폴링 상태' }))
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS) })
+    expect(chat.readMessages).toHaveBeenCalledTimes(2)
+    await user.click(panel.getByRole('button', { name: '일시정지' }))
+    await user.click(panel.getByRole('button', { name: '다시 시작' }))
+    await act(async () => { await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS) })
+    expect(chat.readMessages).toHaveBeenCalledTimes(2)
+
+    await act(async () => finishOldPoll(page([msg(11)])))
+    expect(screen.queryByText('m11')).not.toBeInTheDocument()
+    expect(panel.getByText('10')).toBeInTheDocument()
+    expect(chat.readMessages).toHaveBeenNthCalledWith(3, 1, 1, { after: 10 })
+    await act(async () => finishNewPoll(page([msg(12)])))
+    expect(screen.getByText('m12')).toBeInTheDocument()
+    expect(panel.getByText('12')).toBeInTheDocument()
+  })
 })

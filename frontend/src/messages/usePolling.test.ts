@@ -81,6 +81,25 @@ describe('usePolling', () => {
     expect(result.current.requests).toBe(0)
   })
 
+  it('진행 중에 일시정지했다 다시 시작해도 이전 요청과 겹치지 않는다', async () => {
+    let resolveFirst: (result: PollResult) => void = () => {}
+    const poll = vi.fn<() => Promise<PollResult>>()
+      .mockImplementationOnce(() => new Promise<PollResult>((resolve) => { resolveFirst = resolve }))
+      .mockResolvedValue({ hasMore: false, info, count: 1 })
+    const { result, rerender } = renderHook(({ enabled }) => usePolling({ enabled, intervalMs: 1000, poll }), {
+      initialProps: { enabled: true },
+    })
+    await advance(1000)
+    rerender({ enabled: false })
+    rerender({ enabled: true })
+    await advance(1000)
+    expect(poll).toHaveBeenCalledTimes(1)
+
+    await act(async () => resolveFirst({ hasMore: false, info, count: 9 }))
+    expect(poll).toHaveBeenCalledTimes(2)
+    expect(result.current).toMatchObject({ requests: 1, received: 1 })
+  })
+
   it('바꾼 주기는 다음 예약부터 적용한다', async () => {
     const poll = vi.fn<() => Promise<PollResult>>().mockResolvedValue({ hasMore: false, info, count: 0 })
     const { rerender } = renderHook(({ intervalMs }) => usePolling({ enabled: true, intervalMs, poll }), {

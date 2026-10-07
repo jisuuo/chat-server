@@ -1350,7 +1350,7 @@ export function ChatRoomPage({ userId, roomId, onBack }: Props) {
 - Consumes: `PollStats`, `POLL_INTERVALS`
 - Produces: `PollingPanel({ stats, cursor, intervalMs, paused, onIntervalChange, onTogglePause })`. 접근 가능한 이름: 영역 `폴링 상태`, 선택 `폴링 주기`, 버튼 `일시정지`/`다시 시작`
 
-- [ ] **Step 1: 실패하는 테스트** `src/components/PollingPanel.test.tsx`
+- [x] **Step 1: 실패하는 테스트** `src/components/PollingPanel.test.tsx`
 
 ```tsx
 import { render, screen, within } from '@testing-library/react';
@@ -1406,8 +1406,8 @@ describe('PollingPanel', () => {
     expect(panel.getByRole('button', { name: '다시 시작' })).toBeInTheDocument();
   });
 ```
-- [ ] **Step 2: 실패 확인** — `npm test`
-- [ ] **Step 3: 구현** `src/components/PollingPanel.tsx`
+- [x] **Step 2: 실패 확인** — `npm test`
+- [x] **Step 3: 구현** `src/components/PollingPanel.tsx`
 
 ```tsx
 import { POLL_INTERVALS } from '../messages/usePolling';
@@ -1485,7 +1485,7 @@ export function PollingPanel({ stats, cursor, intervalMs, paused, onIntervalChan
     />
     ```
     (`status === 'ready' && (<div className="conversation">…</div>)`를 `status === 'ready' && (<div className="room-body"><div className="conversation">…</div><PollingPanel … /></div>)`로 감싼다.)
-- [ ] **Step 4: `src/styles.css`**
+- [x] **Step 4: `src/styles.css`**
 
 ```css
 :root { font-family: system-ui, sans-serif; color-scheme: light dark; }
@@ -1505,7 +1505,7 @@ body { margin: 0; }
 [role='alert'] { color: #c33; }
 @media (max-width: 640px) { .room-body { grid-template-columns: 1fr; } }
 ```
-- [ ] **Step 5: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
+- [x] **Step 5: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
 
 ---
 

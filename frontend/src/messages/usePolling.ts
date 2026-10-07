@@ -8,7 +8,7 @@ export const DEFAULT_POLL_INTERVAL_MS = 2000
 export type PollResult = { hasMore: boolean; info: CallInfo; count: number }
 export type PollStats = { requests: number; errors: number; received: number; last: CallInfo | null; lastError: string | null }
 
-type Options = { enabled: boolean; intervalMs: number; poll: () => Promise<PollResult> }
+type Options = { enabled: boolean; intervalMs: number; poll: (isCurrent: () => boolean) => Promise<PollResult> }
 
 const EMPTY: PollStats = { requests: 0, errors: 0, received: 0, last: null, lastError: null }
 
@@ -16,6 +16,7 @@ export function usePolling({ enabled, intervalMs, poll }: Options): PollStats {
   const [stats, setStats] = useState<PollStats>(EMPTY)
   const pollRef = useRef(poll)
   const intervalRef = useRef(intervalMs)
+  const inFlightRef = useRef<Promise<PollResult> | null>(null)
 
   useEffect(() => {
     pollRef.current = poll
@@ -30,9 +31,19 @@ export function usePolling({ enabled, intervalMs, poll }: Options): PollStats {
     // 계획 4 세부 #6: 응답을 받은 뒤 다음 요청을 예약해 한 탭의 요청이 겹치지 않게 한다
     // 계획 4 세부 #10: 오류가 나도 같은 주기로 계속한다 (장애 선행, 대기를 늘리지 않음)
     const tick = async () => {
+      // 일시정지 후 다시 시작해도 이전 네트워크 요청이 끝나기 전에는 새 요청을 보내지 않는다
+      const previous = inFlightRef.current
+      if (previous) {
+        try { await previous } catch { /* 이전 요청의 오류는 이전 tick이 처리한다 */ }
+        if (stopped) return
+      }
+
       let delay: number
+      let request: Promise<PollResult> | null = null
       try {
-        const result = await pollRef.current()
+        request = pollRef.current(() => !stopped)
+        inFlightRef.current = request
+        const result = await request
         if (stopped) return
         setStats((current) => ({
           ...current,
@@ -53,6 +64,8 @@ export function usePolling({ enabled, intervalMs, poll }: Options): PollStats {
           lastError: e instanceof Error ? e.message : String(e),
         }))
         delay = intervalRef.current
+      } finally {
+        if (request && inFlightRef.current === request) inFlightRef.current = null
       }
       timer = setTimeout(tick, delay)
     }
