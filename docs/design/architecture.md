@@ -67,7 +67,7 @@ WebSocket  → HandshakeInterceptor           ┘   지금: HeaderUserIdAuthenti
 - HTTP 상태 코드는 실제 결과대로 유지한다 (201, 403, 409, 500). 실패에 200을 주면 Grafana 에러율과 k6 판정이 실패를 성공으로 센다.
 - `success`는 `ApiResponse.ok(data)`, `ApiResponse.fail(code)` 두 생성 방법으로만 만든다. 상태 코드와 `success`가 어긋날 수 없게 한다.
 - 본문이 없던 방 나가기는 204 대신 200 + `{success: true, data: null}`로 모양을 통일한다.
-- 에러 코드는 ADR-018의 목록을 그대로 쓴다. 예외 변환은 `@RestControllerAdvice` 한 곳에서 한다.
+- 에러 코드는 ADR-018의 목록에 `NOT_FOUND`(404, 없는 주소)와 `METHOD_NOT_ALLOWED`(405)를 더해 쓰고, 그 밖의 Spring MVC 요청 오류는 `INVALID_REQUEST`(400)로 묶는다 (ADR-044). 문구는 코드마다 하나로 고정한다. 예외 변환은 `@RestControllerAdvice` 한 곳에서 한다.
 
 ### 모니터링 구성도 (ADR-021)
 ```

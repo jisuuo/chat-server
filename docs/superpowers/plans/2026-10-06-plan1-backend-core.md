@@ -23,7 +23,7 @@
 - 의존 방향: `api → application → domain ← infra`. 기능 사이에는 `message → room.domain`만 허용한다. `domain`은 Spring을 모른다
 - **장애 선행 (ADR-034)**: 격리 수준은 각 DB 기본값, 중복 방지 키 없음. F22(커밋 순서 역전)와 F23(나가기와 전송의 경쟁)은 **고치지 않는다**. 구현 중 새 위험을 발견하면 `failure-lab.md`에 가설로 적고 알리기만 한다
 
-## 이 계획에서 새로 정하는 세부 (검토 필요, 승인되면 ADR-044로 기록)
+## 이 계획에서 새로 정하는 세부 (검토 필요, 승인되면 작업 9 시점의 다음 ADR 번호로 기록. ADR-044·045는 작업 2 중에 사용)
 설계 문서에 없어서 구현하려면 정해야 하는 것들이다.
 
 | # | 항목 | 제안 | 이유 |
@@ -100,7 +100,7 @@ backend/
 
 ### 작업 4. 사용자 (`user`, 개발용)
 - `Nickname`(1~50자), `UserRepository.save(Nickname, Instant) → long id`, `JdbcUserRepository`, `UserService`
-- `DevUserController` `POST /api/dev/users {nickname}` → 201 `{id, nickname}`. `@Profile({"local","bench"})`
+- `DevUserController` `POST /api/dev/users {nickname}` → 201 `{id, nickname}`. `@Profile({"local","bench"})`. 요청 DTO에 `@NotNull @Size(min=1, max=50)`을 달아 400을 먼저 낸다 (ADR-045)
 - 테스트: 단위(`Nickname` 경계값 0/1/50/51자), 통합(두 DB 저장), API(local 프로필에서 201, 다른 프로필에서는 404)
 
 ### 작업 5. 방과 멤버십 도메인 + 저장소 (`room.domain`, `room.infra.jdbc`)
@@ -120,7 +120,7 @@ backend/
   - `list(cursor, size)`: `size+1`개를 읽어 `hasMore`와 `nextCursor`를 만든다
   - `join(userId, roomId)` @Transactional: 방이 없으면 404 → `JoinBoundary.at(room.lastMessageId, now)` → 저장 → `MemberJoinedEvent`
   - `leave(userId, roomId)` @Transactional: 삭제된 행이 없으면 `AccessDeniedEvent` 발행 후 403. 삭제했으면 `MemberLeftEvent` (R5)
-- `RoomController`: 설계 문서 4장의 URL과 상태 코드, size 범위(1~50)를 검증한다
+- `RoomController`: 설계 문서 4장의 URL과 상태 코드, size 범위(1~50)를 검증한다. 방 이름은 DTO에 `@NotBlank @Size(max=50)`, 커서는 `@Pattern("(\\d+|-):\\d+")`로 먼저 막는다 (ADR-045. 도메인의 `RoomName`, `RoomListCursor.parse` 검사는 안전망이고 실패하면 500)
 - API 통합 테스트(두 DB, MockMvc): 생성 201 + 생성자가 멤버, 생성 시 이름 0자/51자 400, 없는 사용자 401, 입장 201/404/409, 나가기 200(`data: null`)/403, 목록의 정렬과 커서
 
 ### 작업 7. 메시지 도메인 + 저장소 (`message.domain`, `message.infra.jdbc`)
@@ -136,14 +136,14 @@ backend/
 - `MessageService` (`room.domain`의 `MembershipRepository`, `RoomRepository`만 의존하고 `RoomService`는 부르지 않는다)
   - `send(userId, roomId, content)` @Transactional: 멤버십 조회(없으면 `AccessDeniedEvent` 발행 후 403) → 저장 → `advanceLastMessageId` (R3, R7)
   - `read(userId, roomId, cursor, size)`: 멤버십 조회(없으면 403) → `find(…, size+1)` → `MessagePage(messages, hasMore)` (R3, R4)
-- `MessageController`: `POST /api/rooms/{roomId}/messages` 201, `GET …?after=|before=&size=` 200. size 범위 1~100
+- `MessageController`: `POST /api/rooms/{roomId}/messages` 201, `GET …?after=|before=&size=` 200. size 범위 1~100. 내용은 DTO에 `@NotNull @Size(min=1, max=1000)`, `after`와 `before`를 함께 주면 컨트롤러가 `ChatException(INVALID_REQUEST)` (ADR-045. `MessageContent`, `MessageCursor.of` 검사는 안전망)
 - API 통합 테스트(두 DB): 전송 201 후 방 목록 맨 위로 이동, 비멤버 전송/조회 403, `after`와 `before`를 함께 주면 400, 재입장 후 이전 메시지가 보이지 않음(R4), 폴링 흐름(`after=마지막 id`)
 
 ### 작업 9. 의존 방향 검사 (ArchUnit) + 문서 반영
 - `ArchitectureTest`: `domain.md` 5장의 두 규칙과 다음 규칙을 함께 검사한다. `room`은 `message`를 모른다. `message`는 `room.domain`만 쓴다. `domain`은 `infra`·`api`·`application`·`org.springframework`를 모른다. `application`은 `api`·`infra`를 모른다. `room`·`message`는 `user`를 모른다
 - 문서
   - `docs/design/domain.md`: 규칙 표에 "테스트" 열을 채운다. 저장소 표기를 하나의 클래스로 고친다
-  - `docs/adr/{진행한 날짜}.md`: ADR-044(이 계획에서 정한 세부. ADR-040~043은 작업 0~1 중에 사용)
+  - `docs/adr/{진행한 날짜}.md`: 다음 ADR 번호(이 계획에서 정한 세부. ADR-040~043은 작업 0~1, ADR-044·045는 작업 2 중에 사용)
   - `docs/README.md`의 현재 상태와 체크리스트 B, C(Redis 제외)를 갱신한다
   - `docs/journal/2026-10-06.md`(또는 진행한 날짜의 일지)
   - 이 계획을 `docs/superpowers/plans/2026-10-06-plan1-backend-core.md`에 저장한다
