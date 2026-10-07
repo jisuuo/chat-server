@@ -136,7 +136,7 @@ backend/
 - `MessageService` (`room.domain`의 `MembershipRepository`, `RoomRepository`만 의존하고 `RoomService`는 부르지 않는다)
   - `send(userId, roomId, content)` @Transactional: 멤버십 조회(없으면 `AccessDeniedEvent` 발행 후 403) → 저장 → `advanceLastMessageId` (R3, R7)
   - `read(userId, roomId, cursor, size)`: 멤버십 조회(없으면 403) → `find(…, size+1)` → `MessagePage(messages, hasMore)` (R3, R4)
-- `MessageController`: `POST /api/rooms/{roomId}/messages` 201, `GET …?after=|before=&size=` 200. size 범위 1~100. 내용은 DTO에 `@NotNull @Size(min=1, max=1000)`, `after`와 `before`를 함께 주면 컨트롤러가 `ChatException(INVALID_REQUEST)` (ADR-045. `MessageContent`, `MessageCursor.of` 검사는 안전망)
+- `MessageController`: `POST /api/rooms/{roomId}/messages` 201, `GET …?after=|before=&size=` 200. size 범위 1~100. 내용은 DTO에서 코드 포인트 기준 1~1000자와 NUL 문자 제외를 검증해 400으로 응답한다 (도메인 `MessageContent`와 같은 규칙). `after`와 `before`를 함께 주면 컨트롤러가 `ChatException(INVALID_REQUEST)` (ADR-045. `MessageContent`, `MessageCursor.of` 검사는 안전망)
 - API 통합 테스트(두 DB): 전송 201 후 방 목록 맨 위로 이동, 비멤버 전송/조회 403, `after`와 `before`를 함께 주면 400, 재입장 후 이전 메시지가 보이지 않음(R4), 폴링 흐름(`after=마지막 id`)
 
 ### 작업 9. 의존 방향 검사 (ArchUnit) + 문서 반영

@@ -12,9 +12,9 @@
 | 사용자 | `User`, `AuthUser` | 채팅을 하는 사람. 지금은 `X-User-Id` 번호로만 식별 | ADR-005, 031 |
 | 채팅방 | `Room` | 대화가 일어나는 공개 공간. 멤버가 0명이어도 남는다 | ADR-012 |
 | 멤버십 | `Membership` | 사용자가 방에 **가입한 관계**. 입장하면 생기고 나가면 사라진다. 입장 경계를 가진다 | ADR-007, 010 |
-| 입장 경계 | `JoinBoundary` | 이 멤버가 어느 메시지부터 볼 수 있는지 표시하는 지점. 메시지 번호 기준과 시각 기준 두 구현 (F18) | ADR-008 |
+| 입장 경계 | `JoinBoundary` | 이 멤버가 어느 메시지부터 볼 수 있는지 표시하는 지점. 현재는 번호 기준이 기본값이고, F18에서 시각 기준과 비교해 최종 결정 | ADR-008 |
 | 메시지 | `Message` | 멤버가 방에 남긴 글. 번호 순서가 곧 대화 순서 | ADR-017 |
-| 메시지 내용 | `MessageContent` | 1~1000자의 메시지 본문 | ADR-032 |
+| 메시지 내용 | `MessageContent` | 1~1000자의 메시지 본문. PostgreSQL이 저장할 수 없는 NUL 문자는 제외 | ADR-032 |
 | 커서 | `MessageCursor` | "여기서부터 이어서"를 가리키는 메시지 번호 (`after`, `before`) | ADR-017 |
 
 ## 2. 규칙
@@ -26,7 +26,7 @@
 | R3 | 멤버만 그 방에 메시지를 보내고 볼 수 있다 | `MessageService`(멤버십 조회 후 진행) | 멤버십 행의 존재 | ADR-011 |
 | R4 | 멤버는 자기 입장 경계 이후의 메시지만 볼 수 있다 | `Membership`, `JoinBoundary` | 조회 조건 | ADR-008 |
 | R5 | 나가면 멤버십이 사라진다. 방은 남는다 | `RoomService` | 행 삭제 | ADR-010, 012 |
-| R6 | 방 이름은 1~50자, 메시지 내용은 1~1000자 | `RoomName`, `MessageContent` | 값 객체 생성 시 | ADR-032 |
+| R6 | 방 이름은 1~50자, 메시지 내용은 1~1000자이며 NUL 문자는 제외 | `RoomName`, `MessageContent` | 값 객체 생성 시 | ADR-032 |
 | R7 | 방 목록은 마지막 메시지가 최근인 순서로 보인다 | `MessageService`가 전송 시 방의 마지막 메시지 번호 갱신 | 조건부 UPDATE | ADR-016 |
 
 담당 클래스와 검증 테스트의 연결은 구현하면서 이 표에 "테스트" 열을 추가해 채운다.
@@ -88,6 +88,35 @@ jissuo.chat
 | `application/` | 요청 하나의 흐름, 트랜잭션 범위, 여러 애그리거트에 걸친 규칙 (R1, R3, R5, R7) | 규칙 자체를 판단하지 않고 도메인에 물어봄 |
 | `infra/` | DB 접근 (`JdbcClient`) | 규칙 판단 |
 | `api/` | HTTP 요청/응답 변환, `ApiResponse` | 규칙 판단 |
+
+### 실제 코드로 읽기 (작업 6 기준, `room`)
+
+| 계층 | 파일 |
+|---|---|
+| `api/` | `RoomController`, 요청 `CreateRoomRequest`, 응답 `RoomResponse`·`MemberResponse`·`RoomPageResponse` |
+| `application/` | `RoomService`, `RoomPage` |
+| `domain/` | `Room`, `Membership`, `RoomName`(이름 규칙), `JoinBoundary`(입장 경계), `RoomListCursor`, 이벤트 4개, 저장소 인터페이스 `RoomRepository`·`MembershipRepository` |
+| `infra/jdbc/` | `JdbcRoomRepository`, `JdbcMembershipRepository` |
+
+**어디에 둘지 헷갈리면** 아래 순서로 묻는다.
+1. URL, JSON, 상태 코드를 알아야 하나? → `api/`
+2. SQL이나 테이블을 알아야 하나? → `infra/`
+3. 여러 일을 순서대로 묶고 트랜잭션을 걸어야 하나? → `application/`
+4. 위 어느 것도 몰라도 되는 규칙인가? → `domain/`
+
+**요청 하나가 지나가는 길** (방 입장 `POST /api/rooms/7/members`)
+
+```
+api          RoomController.join()      @CurrentUser로 사용자 id를 받아 서비스 호출
+application  RoomService.join()         @Transactional 시작
+              ├─ rooms.findById(7)        없으면 404
+              ├─ JoinBoundary.at(...)     domain 규칙: 어느 메시지부터 볼지 (R4)
+              ├─ memberships.save(...)    infra가 INSERT 실행
+              └─ MemberJoinedEvent 발행   커밋
+api          MemberResponse로 바꿔 201 응답
+```
+
+**저장소 인터페이스가 `domain/`에 있는 이유**: 서비스는 `RoomRepository`(인터페이스)만 알고, SQL은 `infra/`의 `JdbcRoomRepository`가 구현한다. 그래서 화살표가 모두 `domain/`을 향하고(`api → application → domain ← infra`), DB나 저장 방식을 바꿔도 `infra/`만 갈아 끼우면 된다. 두 DB 비교와 `chat.repository` 설정이 이 구조에 기대고 있다.
 
 ## 5. 의존 방향 (ADR-039)
 
