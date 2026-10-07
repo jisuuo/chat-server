@@ -54,7 +54,7 @@ WebSocket  → HandshakeInterceptor           ┘   지금: HeaderUserIdAuthenti
 - 메시지 조회 페이지 크기 기본값(50)과 최대값
 - 응답 JSON 구체 형태와 에러 형식 (다음 결정 항목)
 
-## 공용 응답과 모니터링 구성 (ADR-020 ~ 023)
+## 공용 응답과 모니터링 구성 (ADR-020 ~ 023, ADR-062 ~ 080)
 
 ### 공용 응답 `ApiResponse` (ADR-020)
 ```json
@@ -71,15 +71,37 @@ WebSocket  → HandshakeInterceptor           ┘   지금: HeaderUserIdAuthenti
 
 ### 모니터링 구성도 (ADR-021)
 ```
-          ┌─ 로그(JSON, ECS) ─→ Filebeat ─→ Elasticsearch ─→ Kibana (로그 검색)
-          │    ├─ 일반 로그 → app-* 저장소 (짧게 보관)
-채팅 서버 ─┤    └─ 감사 로그 → audit-* 저장소 (길게 보관)
-          ├─ 메트릭 ←── Prometheus가 /actuator/prometheus 주기 수집 ─→ Grafana (그래프)
-          └─ /actuator/health (헬스 체크: 앱, DB, 이후 Redis)
+HTTP 요청 → RequestLogContextFilter (서버 UUID, IP, MDC, 응답 헤더)
+          → AuthFilter (인증 성공 시 MDC userId) → API
+          → ACCESS 한 줄 + 일반 ECS 로그 → backend/logs/app.json
+          → 감사 이벤트 → AuditListener → backend/logs/audit.json
+                                        두 파일 → Filebeat → Elasticsearch app-*/audit-* → Kibana
+채팅 서버 /actuator/prometheus ← Prometheus (5초마다 수집) → Grafana
+채팅 서버 /actuator/health (앱·DB 상태)
 ```
-- 메트릭: Micrometer가 요청 수, 응답 시간, HikariCP 커넥션 사용량을 자동 수집한다.
-- 로그: JSON 구조화 로그(ECS, Spring Boot 3.4 이상). 요청마다 추적 ID를 붙여 한 요청의 로그를 모아 본다.
-- 모니터링 도구는 메모리를 많이 쓰므로 Docker Compose를 나눠 필요할 때만 켠다. 부하 측정과 동시에 돌리면 측정값이 흔들릴 수 있다.
+- 메트릭: Micrometer가 요청 수, 응답 시간 히스토그램, HikariCP, Tomcat 스레드, JVM 힙을 수집한다. `application=chat`, `db=mysql|postgres`, `schema=A|B` 태그로 실험 조건을 구분한다. Prometheus가 계산한 p99는 히스토그램 버킷의 근사값이다.
+- 추적 ID: 가장 먼저 실행되는 필터가 요청마다 UUID를 새로 만들고 MDC `requestId`와 응답 `X-Request-Id`에 넣는다. 클라이언트가 보낸 같은 이름의 헤더는 무시한다. `server.forward-headers-strategy: native`가 내부 프록시의 `X-Forwarded-For`를 처리한 뒤 `getRemoteAddr()`를 MDC `clientIp`로 쓴다. 실제 Tomcat 테스트에서 외부에서 직접 보낸 위조 헤더는 반영되지 않았다.
+- 로그: 콘솔은 `[requestId]`가 보이는 텍스트, 파일은 ECS JSON이다. `LOG_DIR` 기본값은 `logs`이므로 `bootRun`의 파일은 `backend/logs/`에 있다. 테스트는 `backend/build/test-logs/`를 쓴다. app은 10MB 단위·3일·총 200MB, audit은 10MB 단위·30일·총 500MB로 회전한다.
+- 접근 로그: 최상위 필터의 `finally`에서 `ACCESS` 한 줄에 `method`, `path`, `query`, `status`, `durationMs`를 남긴다. 인증 실패 401도 포함하고 `/actuator/**`는 제외한다. 인증 성공 후에는 `AuthFilter`가 MDC에 넣은 `userId`도 함께 기록되며 필터가 요청 끝에 MDC를 지운다. `local`·`prod`에서는 켜고 `bench`에서는 꺼 성능 실험에 미치는 영향을 줄인다.
+- 감사 로그: 아래 이벤트 리스너가 업무 결과를 기록한다. 접근 로그와 감사 로그는 같은 `requestId`로 연결된다. 메시지 본문은 기록하지 않는다.
+- 모니터링 도구는 `infra/compose.monitoring.yml`의 `metrics`와 `logs` 프로필로 필요할 때만 켠다. 부하 측정에서는 Docker 자원 경쟁을 고려해 켠 프로필을 기록한다.
+
+| 프로필 | 서비스 | 호스트 포트 | 확인 주소 |
+|---|---|---|---|
+| `metrics` | Prometheus, Grafana | 19090, 13000 | `/targets`, `chat Step 1` 대시보드 |
+| `logs` | Elasticsearch, Kibana, Filebeat | 19200, 15601 | `/_cat/indices/app-*,audit-*?v`, Discover |
+
+`docker compose -f infra/compose.monitoring.yml --profile metrics up -d --wait` 또는 `--profile logs`로 켠다. 앱은 Compose 밖의 `backend`에서 실행하고 Prometheus는 `host.docker.internal:8080`을 5초마다 읽는다. Grafana 데이터 소스와 대시보드는 파일로 자동 등록된다. 로컬 Grafana는 익명 관리자, Elasticsearch는 보안이 꺼진 학습용 구성이다. Elastic 이미지는 모두 9.5.4, Prometheus는 v3.14.0, Grafana는 13.2.3으로 고정했다. 작은 Docker 볼륨에서 기본 디스크 임계값 때문에 샤드가 배치되지 않아 Elasticsearch의 여유 공간 기준을 1GB/750MB/500MB로 설정했다. 단일 노드의 복제 샤드는 배치되지 않아 색인이 yellow여도 기본 샤드의 읽기·쓰기는 가능하다.
+
+| `chat Step 1` 패널 | 확인할 지표 |
+|---|---|
+| 초당 요청 수 (URI별) | API별 요청량 |
+| p99 응답 시간 (URI별) | 느린 API |
+| p50 / p95 / p99 (전체) | 전체 지연 분포 |
+| 에러율 4xx / 5xx | 클라이언트 오류와 서버 오류 |
+| HikariCP 커넥션 | active·idle·pending |
+| 커넥션 대기와 타임아웃 | 획득 최대 시간·타임아웃 빈도 |
+| Tomcat 바쁜 스레드 · JVM 힙 | 요청 처리 스레드·힙 사용량 |
 
 ### 환경(profile)과 로그 레벨 (ADR-022)
 | 환경 | 우리 코드 | root(외부 전부) | 따로 여는 외부 로그 | 감사 로그 | `/actuator/loggers` |
@@ -97,7 +119,9 @@ WebSocket  → HandshakeInterceptor           ┘   지금: HeaderUserIdAuthenti
 - 대상: 방 생성, 입장, 나가기, 인증/인가 실패. **메시지 전송은 제외** (본문은 개인정보, 양도 많음).
 - 내용: 누가(userId), 언제, 무엇을(동작), 어디서(roomId, IP), 결과(성공/실패 코드).
 - 방식: `AUDIT` 전용 로거 → Filebeat → `audit-*` 별도 저장소. 일반 로그와 보관 기간, 접근 권한을 따로 둔다.
-- 트랜잭션 커밋 후에 기록한다 (`@TransactionalEventListener`). 롤백된 작업이 성공으로 기록되는 것을 막는다.
+- 필드: `action`, `outcome`, `roomId`, `code`, `path`, `credential`(최대 64코드포인트), `occurredAt`; 요청 MDC의 `requestId`, `clientIp`, `userId`도 붙는다. ECS에서 중복 필드 직렬화 오류를 피하도록 `userId`는 MDC 한 곳에만 둔다.
+- 방 생성·입장·나가기 성공은 트랜잭션 커밋 후(`AFTER_COMMIT`)에만 기록한다. 인증·인가 실패는 트랜잭션 종료 뒤(`AFTER_COMPLETION`) 기록하며 트랜잭션이 없어도 기록한다. 롤백된 성공은 남기지 않고 실제 거부는 남긴다.
+- Filebeat는 `app*.json`, `audit*.json`을 따로 읽어 `app-YYYY.MM.dd`, `audit-YYYY.MM.dd`로 보낸다. 로컬에서는 ILM을 설정하지 않았으므로 파일 회전과 Elasticsearch 색인 보관은 별개의 설정이다.
 - 한계: (1) 서버가 갑자기 죽으면 아직 옮겨지지 않은 로그가 유실될 수 있다 (법적 증거 수준이 필요하면 DB 테이블로 바꿔야 함) (2) userId는 JWT 도입 전까지 헤더를 그대로 믿으므로(ADR-005) 신뢰할 수 없는 값이다.
 
 ## 저장소 구조와 같은 주소(origin) 서비스 (ADR-027 ~ 029)

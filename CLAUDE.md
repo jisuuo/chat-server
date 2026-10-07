@@ -8,7 +8,7 @@ HTTP 폴링 → WebSocket → 서버 2대 → Redis로 확장하는 채팅 서�
 
 - 기술: Java 21, Spring Boot 4.1.1, Gradle Kotlin DSL(단일 모듈, 패키지 `jissuo.chat`), `JdbcClient`, Flyway, MySQL 8.4.11 / PostgreSQL 18.6 (DB는 측정 후 선택, ADR-003)
 - 쓰지 않는 것: JPA(Step 1 실험 이후), Spring Security, H2(잠금·커밋 동작이 실제 DB와 달라서)
-- 현재 위치: Step 1(단일 서버 + REST + 폴링). 구현 계획 2(`docs/superpowers/plans/2026-10-07-plan2-test-sql.md`) 완료, 다음은 계획 3(관측)
+- 현재 위치: Step 1(단일 서버 + REST + 폴링). 구현 계획 3(`docs/superpowers/plans/2026-10-07-plan3-observability.md`) 완료, 다음은 계획 4
 
 ## 명령어
 
@@ -22,6 +22,11 @@ docker compose -f infra/compose.db.yml up -d --wait
 ./gradlew test --tests 'jissuo.chat.room.*'      # 일부만 실행
 ./gradlew experimentTest                         # @Tag("experiment") 테스트만 실행
 ./gradlew bootRun --args='--spring.profiles.active=local,mysql'   # profile = 환경(local|bench|prod) × DB(mysql|postgres)
+./gradlew bootRun --args='--spring.profiles.active=bench,mysql'   # 부하 실험: ACCESS 로그 OFF
+
+# 모니터링 (저장소 루트에서, 앱은 backend/bootRun으로 따로 실행)
+docker compose -f infra/compose.monitoring.yml --profile metrics up -d --wait  # Prometheus 19090, Grafana 13000
+docker compose -f infra/compose.monitoring.yml --profile logs up -d --wait     # Elasticsearch 19200, Kibana 15601, Filebeat
 ```
 
 ## 아키텍처 (전체 그림)
@@ -36,7 +41,8 @@ docker compose -f infra/compose.db.yml up -d --wait
 - **설정으로 구현 선택**: `chat.repository=jdbc`, `chat.message-schema=A|B`(messages PK 비교: `id` 단독 / `(room_id, id)`), `chat.join-boundary=id|time`(재입장 경계: `joined_message_id` / `joined_at`). 통합 테스트는 두 DB × 스키마 A/B에서 같은 결과를 보장해야 한다.
 - **Flyway**: DB별 스크립트가 따로 있다. `backend/src/main/resources/db/migration/{mysql,postgresql}`
 - **메시지 조회**: 커서 방식(`after`=폴링, `before`=위로 스크롤, 둘 다 없으면 최신). 응답은 항상 오래된 것 → 최신 순이고 `hasMore`를 포함한다. 방 목록은 `rooms.last_message_id`(비정규화 컬럼)로 정렬하고, 전송 트랜잭션 안에서 조건부 UPDATE로 갱신한다.
-- **감사**: 서비스가 이벤트를 발행하고, `audit`이 커밋 후에 수신한다.
+- **관측**: 최상위 필터가 요청 ID를 생성해 MDC·응답 헤더에 넣고 접근 로그를 남긴다. 메트릭은 `/actuator/prometheus`, 로그는 `backend/logs/app.json`·`audit.json`에 쌓인다.
+- **감사**: 서비스가 이벤트를 발행하고, `audit`은 성공을 커밋 후, 실패를 트랜잭션 종료 뒤에 수신한다.
 
 ## 작업 규칙 (사용자가 정함, `docs/collab-rules.md`)
 
