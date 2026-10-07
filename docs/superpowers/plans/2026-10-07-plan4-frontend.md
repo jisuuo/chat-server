@@ -874,7 +874,7 @@ export function RoomListPage({ userId, onOpen }: Props) {
   - `usePolling({ enabled: boolean; intervalMs: number; poll: () => Promise<PollResult> }): PollStats`
   - `POLL_INTERVALS = [500, 1000, 2000, 5000]`, `DEFAULT_POLL_INTERVAL_MS = 2000`
 
-- [ ] **Step 1: 실패하는 테스트** `src/messages/merge.test.ts`
+- [x] **Step 1: 실패하는 테스트** `src/messages/merge.test.ts`
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -987,8 +987,8 @@ describe('usePolling', () => {
   });
 });
 ```
-- [ ] **Step 2: 실패 확인** — `npm test`
-- [ ] **Step 3: 구현** `src/messages/merge.ts`
+- [x] **Step 2: 실패 확인** — `npm test`
+- [x] **Step 3: 구현** `src/messages/merge.ts`
 
 ```ts
 import type { Message } from '../api/types';
@@ -1069,7 +1069,7 @@ export function usePolling({ enabled, intervalMs, poll }: Options): PollStats {
   return stats;
 }
 ```
-- [ ] **Step 4: 통과 확인** — `npm test`, `npm run lint`(hook 규칙 경고가 나오면 내용을 그대로 보고하고 의논), `npm run build`. 결과를 보고하고 멈춘다.
+- [x] **Step 4: 통과 확인** — `npm test`, `npm run lint`(hook 규칙 경고가 나오면 내용을 그대로 보고하고 의논), `npm run build`. 결과를 보고하고 멈춘다.
 
 ---
 
