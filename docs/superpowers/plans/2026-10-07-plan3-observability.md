@@ -752,7 +752,7 @@ tasks.withType<Test> {
 - Consumes: `RoomCreatedEvent(roomId, userId, at)`, `MemberJoinedEvent`, `MemberLeftEvent`(같은 필드), `AccessDeniedEvent(roomId, userId, code, at)`, `AuthenticationFailedEvent(credential, path, at)`. MDC `requestId`, `clientIp` (작업 3)
 - Produces: 로거 `AUDIT`의 `audit` 메시지와 key-value (세부 #7). 작업 6의 Kibana `audit-*`가 이 필드를 검색한다.
 
-- [ ] **Step 1: 실패하는 통합 테스트 (MySQL 하나)**
+- [x] **Step 1: 실패하는 통합 테스트 (MySQL 하나)**
 리스너는 DB 종류와 무관하고 트랜잭션 동작만 보면 되므로 MySQL에서만 돌린다.
 
 ```java
@@ -932,10 +932,10 @@ class AuditLogTest {
 }
 ```
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 Run: `./gradlew test --tests 'jissuo.chat.audit.AuditLogTest'` → FAIL (`audit.list`가 비어 있음. `롤백된_성공_이벤트는_기록하지_않는다`만 통과)
 
-- [ ] **Step 3: 리스너 구현**
+- [x] **Step 3: 리스너 구현**
 
 ```java
 package jissuo.chat.audit;
@@ -1024,10 +1024,10 @@ class AuditListener {
 }
 ```
 
-- [ ] **Step 4: 통과 확인**
+- [x] **Step 4: 통과 확인**
 Run: `./gradlew test --tests 'jissuo.chat.audit.AuditLogTest'` → PASS
 
-- [ ] **Step 5: ArchUnit 규칙 추가**
+- [x] **Step 5: ArchUnit 규칙 추가**
 `ArchitectureTest`에 추가한다:
 ```java
     // 서비스는 이벤트를 발행할 뿐 감사를 모른다 (ADR-023). 감사를 바꿔도 기능 코드가 바뀌지 않는다
@@ -1038,7 +1038,7 @@ Run: `./gradlew test --tests 'jissuo.chat.audit.AuditLogTest'` → PASS
 ```
 Run: `./gradlew test --tests 'jissuo.chat.ArchitectureTest'` → PASS
 
-- [ ] **Step 6: 파일 형식 수동 확인**
+- [x] **Step 6: 파일 형식 수동 확인**
 `bootRun`(local,mysql) 후 방 생성과 헤더 없는 요청을 curl로 보내고 `tail -2 backend/logs/audit.json`을 본다.
 - 기대: 한 줄 JSON에 `action`, `outcome`, `userId`, `roomId`, `requestId`, `clientIp`가 있다. `app.json`에는 이 줄이 없다.
 - key-value 필드가 JSON에 없으면 Boot ECS 형식이 key-value를 내보내지 않는 것이다. 이 경우 필드를 MDC로 옮기는 방법을 제안하고 멈춘다 (예상과 다른 결과를 그대로 보고).

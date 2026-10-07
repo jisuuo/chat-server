@@ -85,6 +85,12 @@ class ArchitectureTest {
             .that().resideInAPackage("..auth..")
             .should().dependOnClassesThat().resideInAPackage("..domain..");
 
+    // ADR-023: 기능 코드는 감사 구현을 몰라야 수신·저장 방식을 독립적으로 바꿀 수 있다.
+    @ArchTest
+    static final ArchRule nothing_depends_on_audit = noClasses()
+            .that().resideOutsideOfPackage("..audit..")
+            .should().dependOnClassesThat().resideInAPackage("..audit..");
+
     @ArchTest
     static void protected_api_handlers_require_current_user(JavaClasses classes) {
         List<String> violations = new ArrayList<>();
