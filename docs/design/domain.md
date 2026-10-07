@@ -19,17 +19,15 @@
 
 ## 2. 규칙
 
-| # | 규칙 | 담당 | 최종 판정 | 근거 |
-|---|---|---|---|---|
-| R1 | 방을 만든 사람은 자동으로 그 방의 멤버가 된다 | `RoomService`(생성과 입장을 한 트랜잭션) | 트랜잭션 | ADR-017 |
-| R2 | 한 사용자는 한 방에 멤버로 최대 한 번만 있을 수 있다 | `Membership` | **DB UNIQUE** `(room_id, user_id)` | ADR-010 |
-| R3 | 멤버만 그 방에 메시지를 보내고 볼 수 있다 | `MessageService`(멤버십 조회 후 진행) | 멤버십 행의 존재 | ADR-011 |
-| R4 | 멤버는 자기 입장 경계 이후의 메시지만 볼 수 있다 | `Membership`, `JoinBoundary` | 조회 조건 | ADR-008 |
-| R5 | 나가면 멤버십이 사라진다. 방은 남는다 | `RoomService` | 행 삭제 | ADR-010, 012 |
-| R6 | 방 이름은 1~50자, 메시지 내용은 1~1000자이며 NUL 문자는 제외 | `RoomName`, `MessageContent` | 값 객체 생성 시 | ADR-032 |
-| R7 | 방 목록은 마지막 메시지가 최근인 순서로 보인다 | `MessageService`가 전송 시 방의 마지막 메시지 번호 갱신 | 조건부 UPDATE | ADR-016 |
-
-담당 클래스와 검증 테스트의 연결은 구현하면서 이 표에 "테스트" 열을 추가해 채운다.
+| # | 규칙 | 담당 | 최종 판정 | 테스트 | 근거 |
+|---|---|---|---|---|---|
+| R1 | 방을 만든 사람은 자동으로 그 방의 멤버가 된다 | `RoomService`(생성과 입장을 한 트랜잭션) | 트랜잭션 | `RoomApiContract` 생성자 자동 입장·롤백 | ADR-017 |
+| R2 | 한 사용자는 한 방에 멤버로 최대 한 번만 있을 수 있다 | `Membership` | **DB UNIQUE** `(room_id, user_id)` | `JdbcMembershipRepositoryContract` 중복 저장, `RoomApiContract` 중복 입장 | ADR-010 |
+| R3 | 멤버만 그 방에 메시지를 보내고 볼 수 있다 | `MessageService`(멤버십 조회 후 진행) | 멤버십 행의 존재 | `MessageApiContract` 비멤버 전송·조회 | ADR-011 |
+| R4 | 멤버는 자기 입장 경계 이후의 메시지만 볼 수 있다 | `Membership`, `JoinBoundary` | 조회 조건 | `JdbcMessageRepositoryContract` id/time 경계, `MessageApiContract` 재입장 | ADR-008 |
+| R5 | 나가면 멤버십이 사라진다. 방은 남는다 | `RoomService` | 행 삭제 | `RoomApiContract` 나가기, `JdbcMembershipRepositoryContract` 삭제 | ADR-010, 012 |
+| R6 | 방 이름은 1~50자, 메시지 내용은 1~1000자이며 NUL 문자는 제외 | `RoomName`, `MessageContent` | 값 객체 생성 시 | `RoomNameTest`, `MessageContentTest`, 두 API 계약 테스트의 입력 검증 | ADR-032 |
+| R7 | 방 목록은 마지막 메시지가 최근인 순서로 보인다 | `MessageService`가 전송 시 방의 마지막 메시지 번호 갱신 | 조건부 UPDATE | `MessageApiContract` 전송 후 목록, `JdbcRoomRepositoryContract` 조건부 갱신·정렬 | ADR-016 |
 
 ## 3. 경계 (애그리거트)
 
@@ -74,7 +72,7 @@ jissuo.chat
  ├─ message/
  │   ├─ domain/           Message, MessageContent, MessageCursor, MessageRepository
  │   ├─ application/      MessageService (전송, 조회)
- │   ├─ infra/jdbc/       JdbcMessageRepository (스키마 A), JdbcMessageRepositoryB (스키마 B)
+ │   ├─ infra/jdbc/       JdbcMessageRepository (설정에 따라 스키마 A/B 테이블 선택)
  │   └─ api/              MessageController, 요청/응답 DTO
  ├─ user/                 사용자 식별, 개발용 생성 API (같은 4계층)
  ├─ auth/                 인증 (기술 관심사, 도메인 아님)
@@ -140,7 +138,7 @@ api          MemberResponse로 바꿔 201 응답
 
 ### 자동 검사 (ArchUnit)
 
-위 규칙을 JUnit 테스트로 검사한다. 규칙을 어기는 코드는 테스트가 실패한다. 이것은 장애를 미리 고치는 것이 아니라 정한 규칙을 확인하는 테스트다.
+`ArchitectureTest`가 운영 코드의 계층·기능 간 의존 관계를 검사한다. `room → message`와 `room/message → user`를 금지하고, `message → room`은 `room.domain`만 허용한다. `domain`은 다른 계층·`auth`·`common`·Spring을 모르고 `auth`도 `domain`을 모른다. `application`과 `infra`는 `api`나 서로를 의존하지 않고 `api`는 `infra`를 의존하지 않는다. 보호 API 핸들러에는 상속받은 메서드를 포함해 `@CurrentUser AuthUser`가 있어야 한다(ADR-047). 규칙을 어기는 코드는 테스트가 실패한다.
 
 ```java
 noClasses().that().resideInAPackage("..room..")

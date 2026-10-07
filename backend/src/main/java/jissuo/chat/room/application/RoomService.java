@@ -2,6 +2,7 @@ package jissuo.chat.room.application;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import jissuo.chat.common.ChatException;
 import jissuo.chat.common.ErrorCode;
@@ -38,7 +39,8 @@ public class RoomService {
 
     @Transactional
     public Room create(long userId, String name) {
-        Instant now = clock.instant();
+        // ADR-053: 방 생성 응답과 DATETIME(6)/TIMESTAMP(6)에 저장된 시각을 맞춘다.
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
         RoomName roomName = new RoomName(name);
         long roomId = rooms.save(roomName, userId, now);
         // R1: 방과 생성자의 멤버십이 함께 커밋되어야 한다. 첫 입장 경계는 메시지 0이다.
