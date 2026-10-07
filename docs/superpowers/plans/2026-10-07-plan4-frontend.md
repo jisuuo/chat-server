@@ -718,7 +718,7 @@ export default function App() {
 - Consumes: `listRooms`, `createRoom`, `errorMessage`, `Room`
 - Produces: `RoomListPage({ userId: number; onOpen: (roomId: number) => void })`
 
-- [ ] **Step 1: 실패하는 테스트** `src/pages/RoomListPage.test.tsx`
+- [x] **Step 1: 실패하는 테스트** `src/pages/RoomListPage.test.tsx`
 
 ```tsx
 import { render, screen } from '@testing-library/react';
@@ -784,8 +784,8 @@ describe('RoomListPage', () => {
   });
 });
 ```
-- [ ] **Step 2: 실패 확인** — `npm test`
-- [ ] **Step 3: 구현** `src/pages/RoomListPage.tsx`
+- [x] **Step 2: 실패 확인** — `npm test`
+- [x] **Step 3: 구현** `src/pages/RoomListPage.tsx`
 
 ```tsx
 import { useCallback, useEffect, useState } from 'react';
@@ -856,7 +856,7 @@ export function RoomListPage({ userId, onOpen }: Props) {
   );
 }
 ```
-- [ ] **Step 4: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
+- [x] **Step 4: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
 
 ---
 
