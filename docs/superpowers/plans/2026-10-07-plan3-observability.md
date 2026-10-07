@@ -1052,10 +1052,10 @@ Run: `./gradlew test --tests 'jissuo.chat.ArchitectureTest'` → PASS
 - Create: `infra/compose.monitoring.yml` (이 작업에서는 `metrics` profile만)
 - Create: `infra/prometheus/prometheus.yml`, `infra/grafana/provisioning/datasources/prometheus.yml`, `infra/grafana/provisioning/dashboards/provider.yml`, `infra/grafana/dashboards/chat-step1.json`
 
-- [ ] **Step 1: 이미지 버전 고정**
+- [x] **Step 1: 이미지 버전 고정**
 Docker Hub에서 `prom/prometheus`와 `grafana/grafana`의 최신 안정 패치 태그를 확인해 고정한다. 확인 날짜와 태그를 작업 보고와 작업 7의 ADR에 적는다 (ADR-030: 측정 중 버전이 바뀌면 결과를 비교할 수 없다).
 
-- [ ] **Step 2: Compose**
+- [x] **Step 2: Compose**
 ```yaml
 # 필요할 때만 켠다 (ADR-021). 부하 측정 중에는 metrics만 켜서 DB와의 메모리 경쟁을 줄인다 (계획 3 세부 #11)
 # 메트릭: docker compose -f infra/compose.monitoring.yml --profile metrics up -d
@@ -1095,7 +1095,7 @@ volumes:
 ```
 (`<…>` 자리는 Step 1에서 확인한 실제 태그로 채운다)
 
-- [ ] **Step 3: Prometheus 설정** `infra/prometheus/prometheus.yml`
+- [x] **Step 3: Prometheus 설정** `infra/prometheus/prometheus.yml`
 ```yaml
 global:
   # 계획 3 세부 #12: 실험이 수십 초 단위라 기본 15초보다 촘촘하게 모은다
@@ -1107,7 +1107,7 @@ scrape_configs:
       - targets: ["host.docker.internal:8080"]
 ```
 
-- [ ] **Step 4: Grafana 자동 등록**
+- [x] **Step 4: Grafana 자동 등록**
 `infra/grafana/provisioning/datasources/prometheus.yml`:
 ```yaml
 apiVersion: 1
@@ -1142,12 +1142,14 @@ providers:
 
 JSON은 Grafana 화면에서 위 패널을 만든 뒤 "Export → Save to file"(데이터 소스를 uid `prometheus`로 고정, "Export for sharing externally" 끔)로 저장하고, 저장소의 파일을 그 결과로 바꾼다. 화면에서 만든 JSON이 원본이 되어 손으로 쓴 JSON의 오타를 피한다.
 
-- [ ] **Step 5: 확인 (수동)**
+- [x] **Step 5: 확인 (수동)**
 1. `docker compose -f infra/compose.monitoring.yml --profile metrics up -d`
 2. `bootRun`(local,mysql) 상태에서 `localhost:19090/targets`의 `chat`이 UP
 3. 간단한 부하: `for i in $(seq 200); do curl -s -o /dev/null -H 'X-User-Id: 1' localhost:8080/api/rooms; done`
 4. `localhost:13000`의 "chat Step 1" 대시보드에서 요청 수, p99, HikariCP 패널에 값이 보인다 (화면 캡처를 보고에 넣는다)
 5. 앱을 `local,postgres`로 다시 띄우면 범례의 `db`가 `postgres`로 바뀐다
+
+확인 기록(2026-10-07): Prometheus target UP, Grafana API에서 7개 패널 자동 등록 확인, PromQL 14개 모두 실행 성공. 요청 수·p99·HikariCP·Tomcat·JVM 쿼리에 값이 있고 PostgreSQL 전환 후 `db=postgres` 시계열을 확인했다. 화면 캡처는 UI 자동화가 응답하지 않아 확보하지 못했으며 작업 7 보고서에 제한으로 남긴다.
 
 ---
 
