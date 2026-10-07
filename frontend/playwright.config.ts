@@ -6,7 +6,7 @@ export default defineConfig({
   workers: 1,
   use: { baseURL: 'http://localhost:5173', trace: 'retain-on-failure' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
-  // 계획 4 세부 #16: 사용자 생성 API가 열리는 local 프로필이 필요하다. DB compose는 미리 띄운다
+  // ADR-087: 사용자 생성 API가 열리는 local 프로필이 필요하다. DB compose는 미리 띄운다
   webServer: [
     {
       command: "./gradlew bootRun --args='--spring.profiles.active=local,mysql'",

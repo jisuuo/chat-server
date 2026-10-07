@@ -28,8 +28,8 @@ export function usePolling({ enabled, intervalMs, poll }: Options): PollStats {
     let stopped = false
     let timer: ReturnType<typeof setTimeout> | undefined
 
-    // 계획 4 세부 #6: 응답을 받은 뒤 다음 요청을 예약해 한 탭의 요청이 겹치지 않게 한다
-    // 계획 4 세부 #10: 오류가 나도 같은 주기로 계속한다 (장애 선행, 대기를 늘리지 않음)
+    // ADR-083: 응답을 받은 뒤 다음 요청을 예약해 한 탭의 요청이 겹치지 않게 한다
+    // ADR-083: 오류가 나도 같은 주기로 계속한다 (장애 선행, 대기를 늘리지 않음)
     const tick = async () => {
       // 일시정지 후 다시 시작해도 이전 네트워크 요청이 끝나기 전에는 새 요청을 보내지 않는다
       const previous = inFlightRef.current
@@ -52,7 +52,7 @@ export function usePolling({ enabled, intervalMs, poll }: Options): PollStats {
           last: result.info,
           lastError: null,
         }))
-        // 계획 4 세부 #9: 한 번에 다 못 받았으면 다음 주기까지 기다리지 않는다
+        // ADR-083: 한 번에 다 못 받았으면 다음 주기까지 기다리지 않는다
         delay = result.hasMore ? 0 : intervalRef.current
       } catch (e) {
         if (stopped) return

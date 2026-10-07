@@ -84,7 +84,7 @@ describe('ChatRoomPage', () => {
     expect(await screen.findByText('이미 멤버')).toBeInTheDocument()
   })
 
-  it('보낸 메시지는 바로 보이지만 폴링 커서는 조회 응답으로만 전진한다 (세부 #8)', async () => {
+  it('보낸 메시지는 바로 보이지만 폴링 커서는 조회 응답으로만 전진한다 (ADR-083)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.mocked(chat.readMessages)

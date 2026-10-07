@@ -1619,23 +1619,23 @@ test('비멤버가 방 링크를 열면 입장 버튼이 보이고 메시지는 
 
 ## 작업 9. 직접 확인과 문서 반영
 
-- [ ] **Step 1: 브라우저로 직접 확인** (DB compose + `bootRun local,mysql` + `npm run dev`, 필요하면 `--profile metrics`, `--profile logs`). 결과는 "측정/관찰"로 적는다.
+- [x] **Step 1: 브라우저로 직접 확인** (DB compose + `bootRun local,mysql` + `npm run dev`, 필요하면 `--profile metrics`, `--profile logs`). 결과는 "측정/관찰"로 적는다.
   1. 창 두 개(일반 + 시크릿, 또는 새 탭 두 개)에서 다른 사용자로 시작 → 방 생성 → 입장 → 대화 → 나가기 → 재입장
   2. 개발자 도구 Network: 폴링 요청에 `OPTIONS`(preflight)가 없는지 본다 (ADR-028의 예상을 실제로 확인)
   3. 패널 주기를 0.5초로 바꾸고 Grafana "chat Step 1"의 요청 수 변화를 본다
   4. 패널의 `X-Request-Id`로 `backend/logs/app.json`(또는 Kibana `app-*`)을 검색해 같은 요청의 `access` 로그를 찾는다. `clientIp`가 무엇으로 찍히는지 적는다(세부 #15)
   5. 방을 만든 뒤 목록으로 돌아가 새 방이 어디에 보이는지 적는다 (README 미결정 "새 방이 맨 아래에 보이는 문제"의 관찰 자료)
   6. 비멤버로 방을 열어 둔 채(입장하지 않음) 다른 탭에서 나가기 → 패널 오류 수와 `audit.json`의 `ACCESS_DENIED`가 늘어나는지 본다 (F28 재현 가능성 관찰. 고치지 않는다)
-- [ ] **Step 2: `docs/adr/{진행한 날짜}.md`**: ADR-081부터 세부 #1~#16 중 승인·확인된 것, 설치된 정확한 버전(Node, vite, react, typescript, vitest, Playwright). 측정·관찰한 내용과 예상을 구분한다
-- [ ] **Step 3: `docs/design/architecture.md`**의 "저장소 구조와 같은 주소(origin) 서비스": 프론트 구조(hash 화면 전환, `usePolling`, 커서 규칙 #8), 개발 명령, preflight 확인 결과
-- [ ] **Step 4: `docs/failure-lab.md`** (상태 요약 표 포함): F26의 측정 시점을 "계획 4에서 닉네임을 표시하지 않기로 해서 이후로 미룸"으로 고친다. 작업 중 발견한 위험을 가설로 추가한다. 지금 예상하는 후보(관찰한 것만 사용자와 의논해 기록):
+- [x] **Step 2: `docs/adr/{진행한 날짜}.md`**: ADR-081부터 세부 #1~#16 중 승인·확인된 것, 설치된 정확한 버전(Node, vite, react, typescript, vitest, Playwright). 측정·관찰한 내용과 예상을 구분한다
+- [x] **Step 3: `docs/design/architecture.md`**의 "저장소 구조와 같은 주소(origin) 서비스": 프론트 구조(hash 화면 전환, `usePolling`, 커서 규칙 #8), 개발 명령, preflight 확인 결과
+- [x] **Step 4: `docs/failure-lab.md`** (상태 요약 표 포함): F26의 측정 시점을 "계획 4에서 닉네임을 표시하지 않기로 해서 이후로 미룸"으로 고친다. 작업 중 발견한 위험을 가설로 추가한다. 지금 예상하는 후보(관찰한 것만 사용자와 의논해 기록):
   - 탭마다 폴링하므로 한 사용자가 탭 N개를 열면 폴링 부하가 N배가 된다 (F1 조건)
   - 오류가 나도 같은 주기로 재시도하므로 백엔드 장애 중 요청이 줄지 않는다 (세부 #10)
   - 백그라운드 탭에서는 브라우저가 타이머를 늦춰 실제 폴링 주기가 설정보다 길어진다
   - id를 JS `Number`로 받으므로 2^53을 넘으면 정밀도를 잃는다 (현재 규모에서는 예상만)
-- [ ] **Step 5: 설계 문서·README·CLAUDE.md**: 설계 문서 10장 1번(화면 범위)을 해결로 옮긴다. `docs/README.md` 현재 상태(계획 4 완료, ADR 범위, 다음: 계획 5)와 미결정 목록(화면 범위 삭제, 새 방 위치는 관찰 결과 링크). `CLAUDE.md`의 "현재 위치"와 명령어(`cd frontend && npm run dev | npm test | npm run e2e`)
-- [ ] **Step 6: `docs/journal/{진행한 날짜}.md`**: 한 일, 예상과 다르게 나온 것, 남은 것
-- [ ] **Step 7: 최종 확인과 보고** — `cd frontend && npm test && npm run lint && npm run build && npm run e2e`, `cd backend && ./gradlew test`. 결과를 보고하고 커밋 여부를 묻는다.
+- [x] **Step 5: 설계 문서·README·CLAUDE.md**: 설계 문서 10장 1번(화면 범위)을 해결로 옮긴다. `docs/README.md` 현재 상태(계획 4 완료, ADR 범위, 다음: 계획 5)와 미결정 목록(화면 범위 삭제, 새 방 위치는 관찰 결과 링크). `CLAUDE.md`의 "현재 위치"와 명령어(`cd frontend && npm run dev | npm test | npm run e2e`)
+- [x] **Step 6: `docs/journal/{진행한 날짜}.md`**: 한 일, 예상과 다르게 나온 것, 남은 것
+- [x] **Step 7: 최종 확인과 보고** — `cd frontend && npm test && npm run lint && npm run build && npm run e2e`, `cd backend && ./gradlew test`. 결과를 보고하고 커밋 여부를 묻는다.
 
 ---
 

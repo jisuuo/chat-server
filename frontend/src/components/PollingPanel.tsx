@@ -10,7 +10,7 @@ type Props = {
   onTogglePause: () => void
 }
 
-// 계획 4 세부 #1: X-Request-Id로 Kibana·app.json의 같은 요청 로그를 찾는다
+// ADR-081: X-Request-Id로 Kibana·app.json의 같은 요청 로그를 찾는다
 export function PollingPanel({ stats, cursor, intervalMs, paused, onIntervalChange, onTogglePause }: Props) {
   return (
     <aside aria-label="폴링 상태" className="panel">

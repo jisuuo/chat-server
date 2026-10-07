@@ -33,7 +33,7 @@ export default function App() {
         <button onClick={switchUser}>사용자 바꾸기</button>
       </header>
       {route.page === 'room' ? (
-        // 계획 4 세부 #4: 방을 옮기면 커서·메시지 상태를 새로 시작하도록 다시 만든다
+        // ADR-082: 방을 옮기면 커서·메시지 상태를 새로 시작하도록 다시 만든다
         <ChatRoomPage key={route.roomId} userId={userId} roomId={route.roomId} onBack={() => (window.location.hash = ROOMS_HASH)} />
       ) : (
         <RoomListPage userId={userId} onOpen={(roomId) => (window.location.hash = roomHash(roomId))} />

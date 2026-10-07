@@ -8,7 +8,7 @@ HTTP 폴링 → WebSocket → 서버 2대 → Redis로 확장하는 채팅 서�
 
 - 기술: Java 21, Spring Boot 4.1.1, Gradle Kotlin DSL(단일 모듈, 패키지 `jissuo.chat`), `JdbcClient`, Flyway, MySQL 8.4.11 / PostgreSQL 18.6 (DB는 측정 후 선택, ADR-003)
 - 쓰지 않는 것: JPA(Step 1 실험 이후), Spring Security, H2(잠금·커밋 동작이 실제 DB와 달라서)
-- 현재 위치: Step 1(단일 서버 + REST + 폴링). 구현 계획 3(`docs/superpowers/plans/2026-10-07-plan3-observability.md`) 완료, 다음은 계획 4
+- 현재 위치: Step 1(단일 서버 + REST + 폴링). 구현 계획 4(`docs/superpowers/plans/2026-10-07-plan4-frontend.md`) 완료, 다음은 계획 5
 
 ## 명령어
 
@@ -23,6 +23,12 @@ docker compose -f infra/compose.db.yml up -d --wait
 ./gradlew experimentTest                         # @Tag("experiment") 테스트만 실행
 ./gradlew bootRun --args='--spring.profiles.active=local,mysql'   # profile = 환경(local|bench|prod) × DB(mysql|postgres)
 ./gradlew bootRun --args='--spring.profiles.active=bench,mysql'   # 부하 실험: ACCESS 로그 OFF
+
+# 프론트엔드 (frontend/ 에서, Node 22.22.2; DB와 local,mysql 백엔드 필요)
+npm ci
+npm run dev       # 브라우저 http://localhost:5173
+npm test
+npm run e2e       # Playwright가 local,mysql 백엔드와 Vite를 자동 기동할 수 있음
 
 # 모니터링 (저장소 루트에서, 앱은 backend/bootRun으로 따로 실행)
 docker compose -f infra/compose.monitoring.yml --profile metrics up -d --wait  # Prometheus 19090, Grafana 13000

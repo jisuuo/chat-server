@@ -139,7 +139,7 @@ chat-server/
 
 ### 같은 주소(origin)로 서비스하는 이유
 - origin = 프로토콜 + 호스트 + 포트. 하나라도 다르면 브라우저는 다른 주소로 본다.
-- 화면(5173)과 API(8080)가 다른 주소면 브라우저가 보안 규칙(CORS)으로 요청을 막는다. 서버가 허락(CORS 설정)해도, 커스텀 헤더(`X-User-Id`)가 있으면 요청마다 확인 요청(preflight, `OPTIONS`)이 먼저 나가서 폴링 요청이 사실상 두 배가 된다.
+- 화면(5173)과 API(8080)가 다른 주소면 CORS 허용 설정이 없을 때 브라우저가 응답을 막는다. 서버가 허락해도 커스텀 헤더(`X-User-Id`)가 있으면 사전 확인 요청(preflight, `OPTIONS`)이 필요하다.
 - 그래서 브라우저가 한 주소하고만 대화하게 하고, 그 주소가 `/api` 요청을 백엔드로 대신 전달(proxy)한다. 서버끼리의 요청은 CORS 대상이 아니다.
 
 ```
@@ -151,6 +151,14 @@ chat-server/
 - 개발은 Vite: 고친 코드를 바로 보는 것이 중요하다 (작업실).
 - 운영은 nginx: 완성 파일을 빠르게 많은 사용자에게 주고, 여러 서버로 분배하고, WebSocket과 HTTPS를 처리한다 (매장). Vite 개발 서버는 공식적으로 운영용이 아니다.
 - 한계: proxy를 거치면 백엔드가 보는 요청 IP가 proxy의 IP가 된다. 감사 로그(ADR-023)에 실제 IP를 남기려면 `X-Forwarded-For`를 읽도록 설정한다. WebSocket 전달은 Step 2에서 `ws: true` 설정을 추가한다. k6 부하 테스트는 브라우저가 아니라 CORS와 무관하며 백엔드에 직접 요청한다.
+
+### 계획 4 프론트엔드 구현과 직접 확인 (ADR-081 ~ 087)
+
+- `frontend/`는 사용자 선택, 방 목록, 채팅방을 React 상태로 전환한다. `#/rooms`와 `#/rooms/{id}` hash 경로라 새로고침·직접 링크로 방을 다시 열 수 있다. 사용자 ID는 탭별 `sessionStorage`에 둔다. 채팅방에는 폴링 주기, `after` 커서, 요청·오류 수, 마지막 응답 시간과 `X-Request-Id`가 보인다.
+- `usePolling`은 응답을 받은 뒤 다음 `setTimeout`을 예약해 한 탭 안에서 요청을 겹치지 않는다. 기본 주기는 2초이고 0.5/1/2/5초를 선택한다. `after`는 **메시지 조회 응답의 마지막 ID로만** 전진한다. 전송 응답은 화면에 바로 합치되 커서는 옮기지 않는다. 조회 결과의 `hasMore=true`면 곧바로 다음 페이지를 조회한다. 오류 뒤에도 같은 주기로 재시도한다.
+- 방 목록은 자동 갱신하지 않고 새로고침·`nextCursor` 더 보기를 제공한다. 과거 메시지는 `before` 커서를 쓰는 버튼으로 조회한다. 최신 조회의 403 `NOT_A_MEMBER`는 입장 버튼으로 바뀌고, 409 `ALREADY_MEMBER`는 다시 조회한다.
+- 개발 실행: 루트에서 `docker compose -f infra/compose.db.yml up -d --wait`, `backend/`에서 `./gradlew bootRun --args='--spring.profiles.active=local,mysql'`, `frontend/`에서 Node 22.22.2로 `npm ci && npm run dev`. 브라우저는 `http://localhost:5173`을 연다. 단위 테스트는 `npm test`, 브라우저 테스트는 DB 기동 후 `npm run e2e`다.
+- **관찰 (2026-10-07, Chrome + local,mysql):** Network에 `/api/rooms/10/messages?after=55` 요청이 반복됐고 관찰 구간에 `OPTIONS`는 보이지 않았다. 폴링 패널의 요청 ID `1742de53-cad2-4d09-8b37-05abae006c67`은 `backend/logs/app.json`의 `ACCESS` 행(`GET`, 200, `clientIp=127.0.0.1`)과 일치했다. 127.0.0.1에서 접속한 로컬 측정이라 다른 proxy 경로의 IP 동작은 아직 확인하지 않았다.
 
 ## 테스트와 실행 환경 (ADR-030)
 

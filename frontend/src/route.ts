@@ -20,7 +20,7 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener('hashchange', onChange)
 }
 
-// 계획 4 세부 #4: 화면이 둘뿐이라 라우터 라이브러리 대신 hash를 구독한다
+// ADR-082: 화면이 둘뿐이라 라우터 라이브러리 대신 hash를 구독한다
 export function useHashRoute(): Route {
   return parseRoute(useSyncExternalStore(subscribe, () => window.location.hash))
 }

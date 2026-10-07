@@ -16,7 +16,7 @@ export function ChatRoomPage({ userId, roomId, onBack }: Props) {
   const [hasOlder, setHasOlder] = useState(false)
   const [draft, setDraft] = useState('')
   const [error, setError] = useState<string | null>(null)
-  // 계획 4 세부 #8: 커서는 조회 응답으로만 전진한다. 내 메시지 id로 옮기면
+  // ADR-083: 커서는 조회 응답으로만 전진한다. 내 메시지 id로 옮기면
   // 이미 커밋됐지만 아직 받지 못한 더 작은 id의 남의 메시지를 영원히 건너뛴다
   const cursorRef = useRef(0)
   const [cursorView, setCursorView] = useState(0)
@@ -40,7 +40,7 @@ export function ChatRoomPage({ userId, roomId, onBack }: Props) {
       })
       .catch((e: unknown) => {
         if (requestId !== latestRequestRef.current) return
-        // 계획 4 세부 #11: 멤버 여부 API가 없으므로 서버의 인가 결과로 판단한다
+        // ADR-084: 멤버 여부 API가 없으므로 서버의 인가 결과로 판단한다
         if (e instanceof ApiError && e.code === 'NOT_A_MEMBER') {
           setStatus('notMember')
           return
@@ -145,7 +145,7 @@ export function ChatRoomPage({ userId, roomId, onBack }: Props) {
                 </li>
               ))}
             </ol>
-            {/* 계획 4 세부 #14: 길이·문자 검사는 서버 한 곳에서 하고 400 메시지를 보여 준다 */}
+            {/* ADR-085: 길이·문자 검사는 서버 한 곳에서 하고 400 메시지를 보여 준다 */}
             <form onSubmit={send}>
               <input aria-label="메시지" value={draft} onChange={(e) => setDraft(e.target.value)} />
               <button type="submit" disabled={draft.length === 0}>보내기</button>

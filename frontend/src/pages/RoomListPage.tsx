@@ -19,7 +19,7 @@ export function RoomListPage({ userId, onOpen }: Props) {
   const generation = useRef(0)
   const requestedCursor = useRef<string | null>(null)
 
-  // 계획 4 세부 #13: 자동 갱신하지 않는다. 넘기는 중 순서가 바뀐 방의 누락(F27)도 보정하지 않는다
+  // ADR-084: 자동 갱신하지 않는다. 넘기는 중 순서가 바뀐 방의 누락(F27)도 보정하지 않는다
   const loadFirst = useCallback(
     (requestGeneration: number) => listRooms(userId, null)
       .then(({ data }) => {

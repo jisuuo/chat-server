@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import type { Browser, Page } from '@playwright/test'
 
-// 기본 폴링 주기 2초(계획 4 세부 #7)보다 넉넉하게 기다린다
+// 기본 폴링 주기 2초(ADR-083)보다 넉넉하게 기다린다
 const POLL_TIMEOUT = 10_000
 
 async function newUser(browser: Browser, nickname: string): Promise<Page> {

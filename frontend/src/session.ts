@@ -7,7 +7,7 @@ export function parseUserId(text: string): number | null {
   return Number.isSafeInteger(id) ? id : null
 }
 
-// 계획 4 세부 #3: 탭마다 다른 사용자로 대화를 확인하려고 sessionStorage에 둔다
+// ADR-082: 탭마다 다른 사용자로 대화를 확인하려고 sessionStorage에 둔다
 export function loadUserId(): number | null {
   const value = sessionStorage.getItem(KEY)
   return value === null ? null : parseUserId(value)
