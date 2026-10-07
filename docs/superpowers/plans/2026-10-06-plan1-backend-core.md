@@ -120,8 +120,8 @@ backend/
   - `list(cursor, size)`: `size+1`개를 읽어 `hasMore`와 `nextCursor`를 만든다
   - `join(userId, roomId)` @Transactional: 방이 없으면 404 → `JoinBoundary.at(room.lastMessageId, now)` → 저장 → `MemberJoinedEvent`
   - `leave(userId, roomId)` @Transactional: 삭제된 행이 없으면 `AccessDeniedEvent` 발행 후 403. 삭제했으면 `MemberLeftEvent` (R5)
-- `RoomController`: 설계 문서 4장의 URL과 상태 코드, size 범위(1~50)를 검증한다. 방 이름은 DTO에 `@NotBlank @Size(max=50)`, 커서는 `@Pattern("(\\d+|-):\\d+")`로 먼저 막는다 (ADR-045. 도메인의 `RoomName`, `RoomListCursor.parse` 검사는 안전망이고 실패하면 500)
-- API 통합 테스트(두 DB, MockMvc): 생성 201 + 생성자가 멤버, 생성 시 이름 0자/51자 400, 없는 사용자 401, 입장 201/404/409, 나가기 200(`data: null`)/403, 목록의 정렬과 커서
+- `RoomController`: 설계 문서 4장의 URL과 상태 코드, size 범위(1~50)를 검증한다. 방 이름은 DTO에 `@NotBlank @CodePointLength(max=50) @Pattern(regexp = RoomName.ALLOWED)`를 적용한다(ADR-048, ADR-050). 커서는 컨트롤러가 `RoomListCursor.parse`를 부르고, 그 자리에서만 `IllegalArgumentException`을 잡아 `ChatException(INVALID_REQUEST)`로 바꾼다 (ADR-045의 "어노테이션으로 표현할 수 없는 조건". 정규식은 Long 범위를 넘는 숫자를 통과시켜 500이 되므로 쓰지 않는다, 작업 5 코드 리뷰). 도메인의 `RoomName` 검사는 안전망이고 실패하면 500
+- API 통합 테스트(두 DB, MockMvc): 생성 201 + 생성자가 멤버, 생성 시 이름 0자/51자 400, 없는 사용자 401, 입장 201/404/409, 나가기 200(`data: null`)/403, 목록의 정렬과 커서, 잘못된 커서 400(형식 오류, Long 범위를 넘는 `999999999999999999999:1`)
 
 ### 작업 7. 메시지 도메인 + 저장소 (`message.domain`, `message.infra.jdbc`)
 - `MessageContent`(1~1000자), `Message(id, roomId, senderId, content, createdAt)`, `MessageCursor`(`latest()`/`after(id)`/`before(id)`, `of(Long after, Long before)`: 둘 다 있으면 400)
