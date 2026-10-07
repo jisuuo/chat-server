@@ -4,9 +4,9 @@ import { createRoom, listRooms } from '../api/chat'
 import { errorMessage } from '../api/client'
 import type { Room } from '../api/types'
 
-type Props = { userId: number; onOpen: (roomId: number) => void }
+type Props = { userId: number; activeRoomId: number | null; onOpen: (roomId: number) => void; onRoomsChange: (rooms: Room[]) => void }
 
-export function RoomListPage({ userId, onOpen }: Props) {
+export function RoomListPage({ userId, activeRoomId, onOpen, onRoomsChange }: Props) {
   const [rooms, setRooms] = useState<Room[]>([])
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(false)
@@ -18,26 +18,40 @@ export function RoomListPage({ userId, onOpen }: Props) {
   const loadingMore = useRef(false)
   const generation = useRef(0)
   const requestedCursor = useRef<string | null>(null)
+  const queuedRefresh = useRef(false)
+
+  // ADR-117: 채팅방 제목을 사이드바가 읽은 목록에서 찾는다
+  useEffect(() => { onRoomsChange(rooms) }, [rooms, onRoomsChange])
 
   // ADR-084: 자동 갱신하지 않는다. 넘기는 중 순서가 바뀐 방의 누락(F27)도 보정하지 않는다
   const loadFirst = useCallback(
-    (requestGeneration: number) => listRooms(userId, null)
-      .then(({ data }) => {
-        if (requestGeneration !== generation.current) return
+    function loadFirst(requestGeneration: number) {
+      return listRooms(userId, null)
+        .then(({ data }) => {
+        if (requestGeneration !== generation.current || queuedRefresh.current) return
         setRooms(data.rooms)
         setNextCursor(data.nextCursor)
         setHasMore(data.hasMore)
         setError(null)
-      })
-      .catch((e: unknown) => {
-        if (requestGeneration !== generation.current) return
+        })
+        .catch((e: unknown) => {
+        if (requestGeneration !== generation.current || queuedRefresh.current) return
         setError(errorMessage(e))
-      })
-      .finally(() => {
+        })
+        .finally(() => {
         if (requestGeneration !== generation.current) return
+        if (queuedRefresh.current) {
+          queuedRefresh.current = false
+          loadingMore.current = false
+          requestedCursor.current = null
+          setIsLoadingMore(false)
+          void loadFirst(++generation.current)
+          return
+        }
         loadingFirst.current = false
         setIsLoadingFirst(false)
-      }),
+        })
+    },
     [userId],
   )
 
@@ -49,7 +63,11 @@ export function RoomListPage({ userId, onOpen }: Props) {
   }, [loadFirst])
 
   function refresh() {
-    if (loadingFirst.current) return
+    if (loadingFirst.current) {
+      // ADR-116: 방 생성이 첫 조회보다 먼저 끝나면 그 조회 뒤 새 목록을 다시 읽는다
+      queuedRefresh.current = true
+      return
+    }
     loadingFirst.current = true
     loadingMore.current = false
     requestedCursor.current = null
@@ -91,6 +109,9 @@ export function RoomListPage({ userId, onOpen }: Props) {
     event.preventDefault()
     try {
       const { data } = await createRoom(userId, name)
+      setName('')
+      // ADR-116: 사이드바에 만든 방이 보이도록 첫 페이지부터 다시 읽는다
+      refresh()
       onOpen(data.id)
     } catch (e) {
       setError(errorMessage(e))
@@ -98,24 +119,23 @@ export function RoomListPage({ userId, onOpen }: Props) {
   }
 
   return (
-    <section className="rooms">
-      <form onSubmit={create}>
-        <input aria-label="방 이름" placeholder="방 이름" value={name} onChange={(e) => setName(e.target.value)} />
+    <aside className="sidebar" aria-label="방">
+      <form className="new-room" onSubmit={create}>
+        <input aria-label="방 이름" placeholder="새 방 이름" value={name} onChange={(e) => setName(e.target.value)} />
         <button type="submit">방 만들기</button>
       </form>
-      <button onClick={refresh} disabled={isLoadingFirst}>새로고침</button>
-      {error && <p role="alert">{error}</p>}
-      <ul aria-label="방 목록">
+      <div className="sidebar-actions">
+        <button onClick={refresh} disabled={isLoadingFirst}>새로고침</button>
+      </div>
+      {error && <p role="alert" className="error">{error}</p>}
+      <ul aria-label="방 목록" className="room-list">
         {rooms.map((room) => (
           <li key={room.id}>
-            <button onClick={() => onOpen(room.id)}>{room.name}</button>
-            <small>
-              #{room.id} · {room.lastMessageId === null ? '메시지 없음' : `마지막 메시지 #${room.lastMessageId}`}
-            </small>
+            <button aria-current={room.id === activeRoomId ? 'page' : undefined} onClick={() => onOpen(room.id)}>{room.name}</button>
           </li>
         ))}
       </ul>
-      {hasMore && <button onClick={loadMore} disabled={isLoadingFirst || isLoadingMore}>더 보기</button>}
-    </section>
+      {hasMore && <button className="more" onClick={loadMore} disabled={isLoadingFirst || isLoadingMore}>더 보기</button>}
+    </aside>
   )
 }

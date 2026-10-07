@@ -42,7 +42,11 @@ export async function apiFetch<T>(path: string, options: Options = {}): Promise<
   throw new ApiError(response.status, body?.error?.code ?? 'UNKNOWN', body?.error?.message ?? `HTTP ${response.status}`, info)
 }
 
+export const CONNECTION_ERROR = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.'
+
+// ADR-118: 사용자에게는 서버 문구만 보인다. 코드는 개발자 도구의 응답 본문에서 본다
 export function errorMessage(e: unknown): string {
-  if (e instanceof ApiError) return `${e.message} (${e.code})`
+  if (e instanceof ApiError) return e.code === 'UNKNOWN' ? CONNECTION_ERROR : e.message
+  if (e instanceof TypeError) return CONNECTION_ERROR
   return e instanceof Error ? e.message : String(e)
 }

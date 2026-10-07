@@ -35,3 +35,7 @@ export function readMessages(userId: number, roomId: number, query: MessageQuery
   const qs = params.toString()
   return apiFetch<MessagePage>(`/api/rooms/${roomId}/messages${qs ? `?${qs}` : ''}`, { userId })
 }
+
+export function listUsers(userId: number, ids: number[]) {
+  return apiFetch<User[]>(`/api/users?ids=${ids.join(',')}`, { userId })
+}

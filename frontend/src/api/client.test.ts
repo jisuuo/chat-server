@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, apiFetch, errorMessage } from './client'
+import { ApiError, CONNECTION_ERROR, apiFetch, errorMessage } from './client'
 
 function respond(status: number, body: unknown, requestId = 'r-1') {
   const text = typeof body === 'string' ? body : JSON.stringify(body)
@@ -51,9 +51,10 @@ describe('apiFetch', () => {
 })
 
 describe('errorMessage', () => {
-  it('ApiError는 메시지와 코드를 함께 보여 준다', () => {
+  it('ApiError는 서버 문구만, 연결 실패는 안내 문구 (계획 6 세부 #12)', () => {
     const info = { status: 409, requestId: null, durationMs: 1 }
-    expect(errorMessage(new ApiError(409, 'ALREADY_MEMBER', '이미 멤버입니다.', info))).toBe('이미 멤버입니다. (ALREADY_MEMBER)')
-    expect(errorMessage(new TypeError('Failed to fetch'))).toBe('Failed to fetch')
+    expect(errorMessage(new ApiError(409, 'ALREADY_MEMBER', '이미 멤버입니다.', info))).toBe('이미 멤버입니다.')
+    expect(errorMessage(new ApiError(502, 'UNKNOWN', 'HTTP 502', { ...info, status: 502 }))).toBe(CONNECTION_ERROR)
+    expect(errorMessage(new TypeError('Failed to fetch'))).toBe(CONNECTION_ERROR)
   })
 })

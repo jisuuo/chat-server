@@ -75,6 +75,6 @@ describe('LoginPage', () => {
     render(<LoginPage onLogin={vi.fn()} />)
     await userEvent.type(screen.getByLabelText('닉네임'), ' ')
     await userEvent.click(screen.getByRole('button', { name: '새 사용자로 시작' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('INVALID_REQUEST')
+    expect(await screen.findByRole('alert')).toHaveTextContent('요청 값이 올바르지 않습니다.')
   })
 })

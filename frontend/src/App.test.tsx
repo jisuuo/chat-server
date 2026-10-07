@@ -6,7 +6,7 @@ import App from './App'
 
 vi.mock('./api/chat')
 vi.mock('./pages/RoomListPage', () => ({ RoomListPage: () => <p>방 목록 화면</p> }))
-vi.mock('./pages/ChatRoomPage', () => ({ ChatRoomPage: ({ roomId }: { roomId: number }) => <p>채팅방 {roomId}</p> }))
+vi.mock('./pages/ChatRoomPage', () => ({ ChatRoomPage: ({ roomId, title }: { roomId: number; title: string }) => <p>채팅방 {roomId} {title}</p> }))
 
 describe('App', () => {
   beforeEach(() => {
@@ -24,8 +24,16 @@ describe('App', () => {
     sessionStorage.setItem('chat.userId', '3')
     window.location.hash = '#/rooms/7'
     render(<App />)
-    expect(screen.getByText('채팅방 7')).toBeInTheDocument()
+    expect(screen.getByText('방 목록 화면')).toBeInTheDocument()
+    expect(screen.getByText('채팅방 7 방 #7')).toBeInTheDocument()
     expect(screen.getByText('사용자 #3')).toBeInTheDocument()
+  })
+
+  it('방이 없으면 방을 고르라는 안내', () => {
+    sessionStorage.setItem('chat.userId', '3')
+    render(<App />)
+    expect(screen.getByText('방 목록 화면')).toBeInTheDocument()
+    expect(screen.getByText('방을 고르거나 새로 만드세요.')).toBeInTheDocument()
   })
 
   it('기존 id로 시작하고 사용자를 바꾸면 세션을 지운다', async () => {

@@ -40,7 +40,7 @@ test('두 사용자가 폴링으로 대화하고, 다시 입장하면 이전 메
   await expect(b.getByRole('list', { name: '대화' })).toContainText('안녕 B', { timeout: POLL_TIMEOUT })
 
   await b.getByRole('button', { name: '나가기' }).click()
-  await expect(b.getByRole('button', { name: '방 만들기' })).toBeVisible()
+  await expect(b).toHaveURL(/#\/rooms$/)
   await send(a, '나간 뒤 메시지')
 
   await enter(b, roomHash)
@@ -62,4 +62,27 @@ test('비멤버가 방 링크를 열면 입장 버튼이 보이고 메시지는 
   await c.goto(`/${new URL(a.url()).hash}`)
   await expect(c.getByRole('button', { name: '입장' })).toBeVisible()
   await expect(c.getByText('비밀')).toHaveCount(0)
+})
+
+test('375px에서는 목록과 대화를 한 화면씩 보이고 다크 테마를 적용한다', async ({ browser }) => {
+  const suffix = Date.now().toString(36)
+  const a = await newUser(browser, `mobile-${suffix}`)
+  await a.setViewportSize({ width: 375, height: 812 })
+  await expect(a.locator('.sidebar')).toBeVisible()
+  await expect(a.locator('.main')).toBeHidden()
+
+  await a.getByLabel('방 이름').fill(`mobile-${suffix}`)
+  await a.getByRole('button', { name: '방 만들기' }).click()
+  await expect(a).toHaveURL(/#\/rooms\/\d+$/)
+  await expect(a.locator('.sidebar')).toBeHidden()
+  await expect(a.getByRole('button', { name: '방 목록으로' })).toBeVisible()
+
+  await send(a, '다크 모드 확인')
+  await a.emulateMedia({ colorScheme: 'dark' })
+  await expect(a.locator('body')).toHaveCSS('background-color', 'rgb(21, 23, 26)')
+  await expect(a.locator('.msg.mine .bubble')).toHaveCSS('background-color', 'rgb(79, 143, 247)')
+
+  await a.getByRole('button', { name: '방 목록으로' }).click()
+  await expect(a.locator('.sidebar')).toBeVisible()
+  await expect(a.locator('.main')).toBeHidden()
 })

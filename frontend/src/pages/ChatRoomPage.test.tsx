@@ -15,12 +15,15 @@ const msg = (id: number, senderId = 2, content = `m${id}`): Message => ({ id, ro
 const page = (messages: Message[], hasMore = false) => ({ data: { messages, hasMore }, info })
 
 describe('ChatRoomPage', () => {
-  beforeEach(() => vi.resetAllMocks())
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(chat.listUsers).mockResolvedValue({ data: [], info })
+  })
   afterEach(() => vi.useRealTimers())
 
   it('멤버면 최신 메시지를 작성자 id와 함께 보여 준다', async () => {
     vi.mocked(chat.readMessages).mockResolvedValue(page([msg(1, 2, '안녕')]))
-    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
     expect(await screen.findByText('안녕')).toBeInTheDocument()
     expect(screen.getByText('사용자 #2')).toBeInTheDocument()
     expect(chat.readMessages).toHaveBeenCalledWith(1, 1)
@@ -34,7 +37,7 @@ describe('ChatRoomPage', () => {
       .mockImplementationOnce(() => new Promise((resolve) => { finishFirst = resolve }))
       .mockImplementationOnce(() => new Promise((resolve) => { finishSecond = resolve }))
       .mockResolvedValue(page([]))
-    render(<StrictMode><ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} /></StrictMode>)
+    render(<StrictMode><ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} /></StrictMode>)
     expect(chat.readMessages).toHaveBeenCalledTimes(2)
 
     await act(async () => finishSecond(page([msg(11)])))
@@ -55,7 +58,7 @@ describe('ChatRoomPage', () => {
     vi.mocked(chat.readMessages)
       .mockImplementationOnce(() => new Promise((_, reject) => { failFirst = reject }))
       .mockImplementationOnce(() => new Promise((resolve) => { finishSecond = resolve }))
-    render(<StrictMode><ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} /></StrictMode>)
+    render(<StrictMode><ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} /></StrictMode>)
 
     await act(async () => finishSecond(page([msg(11)])))
     await act(async () => failFirst(new ApiError(403, 'NOT_A_MEMBER', '멤버가 아닙니다.', { ...info, status: 403 })))
@@ -68,7 +71,7 @@ describe('ChatRoomPage', () => {
       .mockRejectedValueOnce(new ApiError(403, 'NOT_A_MEMBER', '멤버가 아닙니다.', { ...info, status: 403 }))
       .mockResolvedValue(page([msg(5, 2, '입장 후')]))
     vi.mocked(chat.joinRoom).mockResolvedValue({ data: { roomId: 1, userId: 1 }, info: { ...info, status: 201 } })
-    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
     await userEvent.click(await screen.findByRole('button', { name: '입장' }))
     expect(chat.joinRoom).toHaveBeenCalledWith(1, 1)
     expect(await screen.findByText('입장 후')).toBeInTheDocument()
@@ -79,7 +82,7 @@ describe('ChatRoomPage', () => {
       .mockRejectedValueOnce(new ApiError(403, 'NOT_A_MEMBER', '멤버가 아닙니다.', { ...info, status: 403 }))
       .mockResolvedValue(page([msg(5, 2, '이미 멤버')]))
     vi.mocked(chat.joinRoom).mockRejectedValue(new ApiError(409, 'ALREADY_MEMBER', '이미 멤버입니다.', { ...info, status: 409 }))
-    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
     await userEvent.click(await screen.findByRole('button', { name: '입장' }))
     expect(await screen.findByText('이미 멤버')).toBeInTheDocument()
   })
@@ -92,7 +95,7 @@ describe('ChatRoomPage', () => {
       .mockResolvedValueOnce(page([msg(11, 3, '남의 메시지'), msg(12, 1, '내 메시지')]))
       .mockResolvedValue(page([]))
     vi.mocked(chat.sendMessage).mockResolvedValue({ data: msg(12, 1, '내 메시지'), info: { ...info, status: 201 } })
-    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
     await screen.findByText('m10')
 
     await user.type(screen.getByLabelText('메시지'), '내 메시지')
@@ -105,15 +108,15 @@ describe('ChatRoomPage', () => {
     })
     expect(chat.readMessages).toHaveBeenNthCalledWith(2, 1, 1, { after: 10 })
     expect(await screen.findByText('남의 메시지')).toBeInTheDocument()
-    const items = within(screen.getByRole('list', { name: '대화' })).getAllByRole('listitem')
-    expect(items.map((li) => li.textContent)).toEqual(['사용자 #2m10', '사용자 #3남의 메시지', '사용자 #1내 메시지'])
+    const bubbles = within(screen.getByRole('list', { name: '대화' })).getAllByText(/^(m10|남의 메시지|내 메시지)$/)
+    expect(bubbles.map((el) => el.textContent)).toEqual(['m10', '남의 메시지', '내 메시지'])
   })
 
   it('이전 메시지 더 보기는 가장 오래된 id를 before로 보낸다', async () => {
     vi.mocked(chat.readMessages)
       .mockResolvedValueOnce(page([msg(20), msg(21)], true))
       .mockResolvedValueOnce(page([msg(18), msg(19)], false))
-    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
     await userEvent.click(await screen.findByRole('button', { name: '이전 메시지 더 보기' }))
     expect(chat.readMessages).toHaveBeenLastCalledWith(1, 1, { before: 20 })
     expect(await screen.findByText('m18')).toBeInTheDocument()
@@ -123,17 +126,25 @@ describe('ChatRoomPage', () => {
   it('전송이 거절되면 서버 메시지를 보여 준다', async () => {
     vi.mocked(chat.readMessages).mockResolvedValue(page([]))
     vi.mocked(chat.sendMessage).mockRejectedValue(new ApiError(403, 'NOT_A_MEMBER', '멤버가 아닙니다.', { ...info, status: 403 }))
-    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
     await userEvent.type(await screen.findByLabelText('메시지'), '안녕')
     await userEvent.click(screen.getByRole('button', { name: '보내기' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent('NOT_A_MEMBER')
+    expect(await screen.findByRole('alert')).toHaveTextContent('멤버가 아닙니다.')
+  })
+
+  it('제목을 보이고, 내 메시지는 mine으로 표시한다', async () => {
+    vi.mocked(chat.readMessages).mockResolvedValue(page([msg(1, 2, '남'), msg(2, 1, '나')]))
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
+    expect(await screen.findByRole('heading', { name: '잡담' })).toBeInTheDocument()
+    expect(screen.getByText('나').closest('li')).toHaveClass('mine')
+    expect(screen.getByText('남').closest('li')).not.toHaveClass('mine')
   })
 
   it('나가면 방 목록으로 돌아간다', async () => {
     vi.mocked(chat.readMessages).mockResolvedValue(page([]))
     vi.mocked(chat.leaveRoom).mockResolvedValue({ data: null, info })
     const onBack = vi.fn()
-    render(<ChatRoomPage userId={1} roomId={1} onBack={onBack} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={onBack} />)
     await userEvent.click(await screen.findByRole('button', { name: '나가기' }))
     expect(chat.leaveRoom).toHaveBeenCalledWith(1, 1)
     expect(onBack).toHaveBeenCalled()
@@ -143,7 +154,8 @@ describe('ChatRoomPage', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     vi.mocked(chat.readMessages).mockResolvedValue(page([msg(10)]))
-    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
+    await user.click(await screen.findByText('폴링 상태'))
     const panel = within(await screen.findByRole('complementary', { name: '폴링 상태' }))
     expect(panel.getByText('10')).toBeInTheDocument()
 
@@ -164,7 +176,8 @@ describe('ChatRoomPage', () => {
       .mockResolvedValueOnce(page([msg(10)]))
       .mockImplementationOnce(() => new Promise((resolve) => { finishOldPoll = resolve }))
       .mockImplementationOnce(() => new Promise((resolve) => { finishNewPoll = resolve }))
-    render(<ChatRoomPage userId={1} roomId={1} onBack={vi.fn()} />)
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
+    await user.click(await screen.findByText('폴링 상태'))
     const panel = within(await screen.findByRole('complementary', { name: '폴링 상태' }))
 
     await act(async () => { await vi.advanceTimersByTimeAsync(DEFAULT_POLL_INTERVAL_MS) })

@@ -3,7 +3,10 @@ package jissuo.chat.user.infra.jdbc;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Collection;
+import java.util.List;
 import jissuo.chat.user.domain.Nickname;
+import jissuo.chat.user.domain.User;
 import jissuo.chat.user.domain.UserRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -29,5 +32,13 @@ public class JdbcUserRepository implements UserRepository {
                 .update(keyHolder, "id");
         // MySQL 드라이버는 키를 BigInteger로 준다(측정). getKeyAs(Long.class)는 형 변환에 실패하므로 Number로 받는다
         return keyHolder.getKey().longValue();
+    }
+
+    @Override
+    public List<User> findAllById(Collection<Long> ids) {
+        return jdbc.sql("SELECT id, nickname FROM users WHERE id IN (:ids)")
+                .param("ids", ids)
+                .query((rs, n) -> new User(rs.getLong("id"), new Nickname(rs.getString("nickname"))))
+                .list();
     }
 }

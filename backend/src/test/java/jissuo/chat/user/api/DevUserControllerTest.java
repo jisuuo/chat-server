@@ -9,10 +9,12 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import jissuo.chat.auth.HeaderUserIdAuthenticator;
 import jissuo.chat.user.application.UserService;
 import jissuo.chat.user.domain.Nickname;
+import jissuo.chat.user.domain.User;
 import jissuo.chat.user.domain.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -111,6 +113,11 @@ class DevUserControllerTest {
         public long save(Nickname nickname, Instant createdAt) {
             saved.add(new Saved(nickname, createdAt));
             return 7;
+        }
+
+        @Override
+        public List<User> findAllById(Collection<Long> ids) {
+            return List.of();
         }
     }
 
