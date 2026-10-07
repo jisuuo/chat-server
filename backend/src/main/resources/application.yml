@@ -1,3 +1,26 @@
 spring:
   application:
     name: chat
+server:
+  forward-headers-strategy: native
+  tomcat:
+    mbeanregistry:
+      enabled: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus
+  endpoint:
+    health:
+      show-components: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      schema: ${chat.message-schema:A}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+logging:
+  pattern:
+    correlation: "[%X{requestId:-}] "
