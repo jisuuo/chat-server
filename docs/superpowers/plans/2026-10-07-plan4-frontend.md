@@ -503,7 +503,7 @@ export function readMessages(userId: number, roomId: number, query: MessageQuery
 - Consumes: `createUser`, `errorMessage`, `parseUserId`, `loadUserId`/`saveUserId`/`clearUserId`, `useHashRoute`, `roomHash`, `ROOMS_HASH`
 - Produces: `LoginPage({ onLogin: (userId: number) => void })`. App이 쓰는 페이지 props: `RoomListPage({ userId, onOpen: (roomId) => void })`, `ChatRoomPage({ userId, roomId, onBack: () => void })` (작업 4·6에서 구현을 채운다)
 
-- [ ] **Step 1: 실패하는 테스트** `src/pages/LoginPage.test.tsx`
+- [x] **Step 1: 실패하는 테스트** `src/pages/LoginPage.test.tsx`
 
 ```tsx
 import { render, screen } from '@testing-library/react';
@@ -586,8 +586,8 @@ describe('App', () => {
   });
 });
 ```
-- [ ] **Step 2: 실패 확인** — `npm test`
-- [ ] **Step 3: 구현** `src/pages/LoginPage.tsx`
+- [x] **Step 2: 실패 확인** — `npm test`
+- [x] **Step 3: 구현** `src/pages/LoginPage.tsx`
 
 ```tsx
 import { useState } from 'react';
@@ -704,7 +704,7 @@ export default function App() {
   );
 }
 ```
-- [ ] **Step 4: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
+- [x] **Step 4: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
 
 ---
 
