@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.time.Clock;
 import jissuo.chat.common.ApiResponse;
 import jissuo.chat.common.ChatException;
+import jissuo.chat.common.RequestLogContextFilter;
+import org.slf4j.MDC;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -56,6 +58,7 @@ public class AuthFilter extends OncePerRequestFilter {
             return;
         }
         request.setAttribute(ATTRIBUTE, user);
+        MDC.put(RequestLogContextFilter.USER_ID, String.valueOf(user.id()));
         chain.doFilter(request, response);
     }
 

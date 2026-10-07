@@ -43,6 +43,9 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+	systemProperty("LOG_DIR", layout.buildDirectory.dir("test-logs").get().asFile.absolutePath)
+	// 여러 캐시된 테스트 컨텍스트의 유휴 풀이 MySQL 연결 한도를 채우지 않게 한다.
+	systemProperty("spring.datasource.hikari.minimum-idle", "0")
 }
 
 tasks.test {

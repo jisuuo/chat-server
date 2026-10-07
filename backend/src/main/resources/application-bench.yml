@@ -3,6 +3,7 @@ logging:
   level:
     root: WARN
     jissuo.chat: INFO
+    ACCESS: "OFF"
 management:
   endpoints:
     web:

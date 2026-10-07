@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import jissuo.chat.common.ApiResponse;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,10 +51,20 @@ class AuthFilterTest {
     }
 
     @Test
+    void 인증_성공_동안_사용자_id가_MDC에_있고_요청_후에는_사라진다() throws Exception {
+        mvc.perform(get("/api/test/mdc").header("X-User-Id", "42"))
+                .andExpect(status().isOk())
+                .andExpect(content().string("42"));
+
+        assertThat(MDC.get("userId")).isNull();
+    }
+
+    @Test
     void 헤더가_없으면_401() throws Exception {
         mvc.perform(get("/api/test/me"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(unauthenticatedBody());
+        assertThat(MDC.get("userId")).isNull();
     }
 
     @ParameterizedTest
@@ -128,6 +139,11 @@ class AuthFilterTest {
         @GetMapping("/api/dev/test")
         ApiResponse<String> dev() {
             return ApiResponse.ok("dev");
+        }
+
+        @GetMapping("/api/test/mdc")
+        String mdcUserId() {
+            return MDC.get("userId");
         }
 
         @GetMapping("/api/dev/me")

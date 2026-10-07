@@ -371,7 +371,7 @@ Run: `./gradlew test --tests 'jissuo.chat.observe.*'` → PASS. 이어서 `./gra
 **Interfaces:**
 - Produces: `RequestLogContextFilter.HEADER = "X-Request-Id"`, MDC 키 `REQUEST_ID = "requestId"`, `CLIENT_IP = "clientIp"`, `USER_ID = "userId"` (작업 4의 감사 테스트가 쓴다). 로거 `ACCESS`(접근 로그, 일반 로그 파일로 간다), 로거 `AUDIT`은 `AUDIT_FILE`로만 간다 (local은 콘솔에도).
 
-- [ ] **Step 1: 실패하는 단위 테스트**
+- [x] **Step 1: 실패하는 단위 테스트**
 
 ```java
 package jissuo.chat.common;
@@ -492,10 +492,10 @@ class RequestLogContextFilterTest {
 ```
 `AuthFilterTest`에 추가: 인증에 성공한 요청은 체인 안에서 `MDC.get("userId")`가 헤더 값과 같고, 실패한 요청은 `userId`가 없다 (기존 테스트의 체인 람다에서 MDC를 기록해 확인).
 
-- [ ] **Step 2: 실패 확인**
+- [x] **Step 2: 실패 확인**
 Run: `./gradlew test --tests 'jissuo.chat.common.RequestLogContextFilterTest' --tests 'jissuo.chat.auth.AuthFilterTest'` → 컴파일 실패 (클래스 없음)
 
-- [ ] **Step 3: 필터 구현**
+- [x] **Step 3: 필터 구현**
 
 ```java
 package jissuo.chat.common;
@@ -581,10 +581,10 @@ logging:
 ```
 작업 2의 `BenchProfileTest`에 `level("ACCESS") == Level.OFF`, `ProdProfileTest`에 `level("ACCESS") == Level.INFO` 확인을 더한다.
 
-- [ ] **Step 4: 단위 테스트 통과 확인**
+- [x] **Step 4: 단위 테스트 통과 확인**
 Run: `./gradlew test --tests 'jissuo.chat.common.RequestLogContextFilterTest' --tests 'jissuo.chat.auth.AuthFilterTest' --tests 'jissuo.chat.observe.*'` → PASS
 
-- [ ] **Step 5: 프록시 헤더 신뢰 테스트 (실제 Tomcat)**
+- [x] **Step 5: 프록시 헤더 신뢰 테스트 (실제 Tomcat)**
 MockMvc는 Tomcat `RemoteIpValve`를 거치지 않으므로 `AuthPathBypassTest`처럼 실제 서버를 띄운다.
 
 ```java
@@ -660,7 +660,7 @@ class ClientIpTest {
 ```
 Run: `./gradlew test --tests 'jissuo.chat.common.ClientIpTest'` → PASS (작업 1에서 `forward-headers-strategy`를 이미 넣었다). 세 번째 테스트가 다르게 나오면 결과 그대로 보고하고 세부 #4를 다시 의논한다.
 
-- [ ] **Step 6: `logback-spring.xml`**
+- [x] **Step 6: `logback-spring.xml`**
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -730,7 +730,7 @@ tasks.withType<Test> {
 ```
 `.gitignore`의 Backend 부분에 `backend/logs/`를 추가한다.
 
-- [ ] **Step 7: 확인**
+- [x] **Step 7: 확인**
 1. `./gradlew test` → 전체 PASS, `backend/build/test-logs/app.json`이 생기고 `backend/logs/`는 생기지 않는다.
 2. 수동: `docker compose -f infra/compose.db.yml up -d --wait` → `./gradlew bootRun --args='--spring.profiles.active=local,mysql'` → `curl -i localhost:8080/api/rooms`
    - 응답 헤더 `X-Request-Id`가 있다

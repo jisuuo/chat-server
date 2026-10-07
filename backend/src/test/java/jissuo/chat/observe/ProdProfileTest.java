@@ -32,6 +32,7 @@ class ProdProfileTest {
     void 우리_코드는_INFO_외부는_WARN이다() {
         assertThat(LocalProfileTest.level("jissuo.chat")).isEqualTo(Level.INFO);
         assertThat(LocalProfileTest.level(Logger.ROOT_LOGGER_NAME)).isEqualTo(Level.WARN);
+        assertThat(LocalProfileTest.level("ACCESS")).isEqualTo(Level.INFO);
     }
 
     @Test
