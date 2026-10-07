@@ -1,0 +1,19 @@
+# infra/compose.db.yml 로 띄운 DB에 접속한다. DB 프로필(mysql, postgres)과 함께 쓴다
+spring:
+  datasource:
+    username: chat
+    password: chat
+---
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: jdbc:mysql://localhost:13306/chat
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://localhost:15432/chat
