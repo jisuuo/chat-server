@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
+import jissuo.chat.auth.HeaderUserIdAuthenticator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -27,7 +28,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @WebMvcTest(GlobalExceptionHandlerTest.TestController.class)
-@Import(GlobalExceptionHandlerTest.TestController.class)
+// 슬라이스에 자동으로 들어오는 AuthFilter를 만들려면 필요하다
+@Import({GlobalExceptionHandlerTest.TestController.class, HeaderUserIdAuthenticator.class, ClockConfig.class})
 class GlobalExceptionHandlerTest {
 
     @Autowired

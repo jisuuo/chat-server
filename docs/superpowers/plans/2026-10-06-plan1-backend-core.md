@@ -23,7 +23,7 @@
 - 의존 방향: `api → application → domain ← infra`. 기능 사이에는 `message → room.domain`만 허용한다. `domain`은 Spring을 모른다
 - **장애 선행 (ADR-034)**: 격리 수준은 각 DB 기본값, 중복 방지 키 없음. F22(커밋 순서 역전)와 F23(나가기와 전송의 경쟁)은 **고치지 않는다**. 구현 중 새 위험을 발견하면 `failure-lab.md`에 가설로 적고 알리기만 한다
 
-## 이 계획에서 새로 정하는 세부 (검토 필요, 승인되면 작업 9 시점의 다음 ADR 번호로 기록. ADR-044·045는 작업 2 중에 사용)
+## 이 계획에서 새로 정하는 세부 (검토 필요, 승인되면 작업 9 시점의 다음 ADR 번호로 기록. ADR-044·045는 작업 2, ADR-046·047은 작업 3 중에 사용)
 설계 문서에 없어서 구현하려면 정해야 하는 것들이다.
 
 | # | 항목 | 제안 | 이유 |
@@ -141,9 +141,10 @@ backend/
 
 ### 작업 9. 의존 방향 검사 (ArchUnit) + 문서 반영
 - `ArchitectureTest`: `domain.md` 5장의 두 규칙과 다음 규칙을 함께 검사한다. `room`은 `message`를 모른다. `message`는 `room.domain`만 쓴다. `domain`은 `infra`·`api`·`application`·`org.springframework`를 모른다. `application`은 `api`·`infra`를 모른다. `room`·`message`는 `user`를 모른다
+- 인증 규칙 검사 (ADR-047, F24): `/api/**`(`/api/dev/**` 제외) 핸들러는 모두 `@CurrentUser AuthUser` 파라미터를 받는다. 필터가 우회됐을 때 리졸버가 두 번째로 막아 주려면 이 규칙이 지켜져야 한다
 - 문서
   - `docs/design/domain.md`: 규칙 표에 "테스트" 열을 채운다. 저장소 표기를 하나의 클래스로 고친다
-  - `docs/adr/{진행한 날짜}.md`: 다음 ADR 번호(이 계획에서 정한 세부. ADR-040~043은 작업 0~1, ADR-044·045는 작업 2 중에 사용)
+  - `docs/adr/{진행한 날짜}.md`: 다음 ADR 번호(이 계획에서 정한 세부. ADR-040~043은 작업 0~1, ADR-044·045는 작업 2, ADR-046·047은 작업 3 중에 사용)
   - `docs/README.md`의 현재 상태와 체크리스트 B, C(Redis 제외)를 갱신한다
   - `docs/journal/2026-10-06.md`(또는 진행한 날짜의 일지)
   - 이 계획을 `docs/superpowers/plans/2026-10-06-plan1-backend-core.md`에 저장한다
