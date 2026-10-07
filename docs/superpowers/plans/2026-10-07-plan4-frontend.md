@@ -1083,7 +1083,7 @@ export function usePolling({ enabled, intervalMs, poll }: Options): PollStats {
 - Consumes: `readMessages`, `sendMessage`, `joinRoom`, `leaveRoom`, `ApiError`, `errorMessage`, `mergeMessages`, `lastId`, `usePolling`, `DEFAULT_POLL_INTERVAL_MS`
 - Produces: `ChatRoomPage({ userId, roomId, onBack })`. 접근 가능한 이름: 버튼 `입장`·`나가기`·`보내기`·`이전 메시지 더 보기`·`방 목록으로`, 입력 `메시지`, 목록 `대화`(작업 8 E2E가 쓴다)
 
-- [ ] **Step 1: 실패하는 테스트** `src/pages/ChatRoomPage.test.tsx`
+- [x] **Step 1: 실패하는 테스트** `src/pages/ChatRoomPage.test.tsx`
 
 ```tsx
 import { act, render, screen, within } from '@testing-library/react';
@@ -1190,8 +1190,8 @@ describe('ChatRoomPage', () => {
   });
 });
 ```
-- [ ] **Step 2: 실패 확인** — `npm test`
-- [ ] **Step 3: 구현** `src/pages/ChatRoomPage.tsx`
+- [x] **Step 2: 실패 확인** — `npm test`
+- [x] **Step 3: 구현** `src/pages/ChatRoomPage.tsx`
 
 ```tsx
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -1336,7 +1336,7 @@ export function ChatRoomPage({ userId, roomId, onBack }: Props) {
   );
 }
 ```
-- [ ] **Step 4: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
+- [x] **Step 4: 통과 확인** — `npm test`, `npm run lint`, `npm run build`. 결과를 보고하고 멈춘다.
 
 ---
 
