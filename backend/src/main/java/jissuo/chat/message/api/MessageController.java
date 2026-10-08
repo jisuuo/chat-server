@@ -33,7 +33,7 @@ public class MessageController {
     @PostMapping("/api/rooms/{roomId}/messages")
     @ResponseStatus(HttpStatus.CREATED)
     @DeliveryStage(value = "receive", transport = "rest")
-    // 계획 7 세부 7A: 작업 13의 AOP 프록시가 가로채도록 public으로 둔다
+    // ADR-135: AOP 프록시가 가로채도록 public으로 둔다
     public ApiResponse<MessageResponse> send(@CurrentUser AuthUser user, @PathVariable long roomId,
                                              @Valid @RequestBody SendMessageRequest request) {
         DeliveryOrigin origin = DeliveryOrigin.start("rest");

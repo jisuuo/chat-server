@@ -2,7 +2,7 @@ package jissuo.chat.message.api.ws;
 
 import jissuo.chat.common.ErrorCode;
 
-/** WS 접속 로그(계획 7 세부 7B)가 처리 결과를 기록할 수 있도록 돌려준다. */
+/** WS 접속 로그(ADR-136)가 처리 결과를 기록할 수 있도록 돌려준다. */
 public record FrameOutcome(String type, Long roomId, String result) {
 
     public static FrameOutcome ok(String type, Long roomId) {

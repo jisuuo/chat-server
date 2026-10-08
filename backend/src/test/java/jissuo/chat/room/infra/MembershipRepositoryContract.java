@@ -134,7 +134,7 @@ public abstract class MembershipRepositoryContract {
 
     @Test
     void 나간_사용자는_멤버_id에서_빠진다() {
-        // 계획 7 세부 4: push 대상은 커밋된 멤버 행 기준이다 (나가기와의 경쟁은 F46으로 남긴다)
+        // ADR-132: push 대상은 커밋된 멤버 행 기준이다 (나가기와의 경쟁은 F46으로 남긴다)
         long second = insertUser();
         repository.save(new Membership(roomId, userId, new JoinBoundary(0, AT)));
         repository.save(new Membership(roomId, second, new JoinBoundary(0, AT)));

@@ -19,7 +19,7 @@ public class MessageFanout {
         this.pusher = pusher;
     }
 
-    // 계획 7 결정 D4: 커밋 뒤 보내는 스레드에서 동기로 보낸다. 한 명이 느리면 모두가 늦어지는 문제(F4)를
+    // ADR-132: 커밋 뒤 보내는 스레드에서 동기로 보낸다. 한 명이 느리면 모두가 늦어지는 문제(F4)를
     // 재현하려고 비동기로 미리 바꾸지 않는다. 예외도 잡지 않는다(F44)
     @TransactionalEventListener
     @DeliveryStage(value = "fanout", total = true)

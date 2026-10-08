@@ -12,7 +12,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/** 계획 7 결정 D4·세부 7A: 트랜잭션 프록시 바깥에서 재므로 receive, save, fanout, push 시간은 서로 겹친다. */
+/** ADR-135: 트랜잭션 프록시 바깥에서 재므로 receive, save, fanout, push 시간은 서로 겹친다. */
 @Aspect
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)

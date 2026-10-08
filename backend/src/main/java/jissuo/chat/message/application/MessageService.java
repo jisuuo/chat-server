@@ -52,7 +52,7 @@ public class MessageService {
         Message saved = messages.save(roomId, userId, new MessageContent(content), clock.instant());
         // R7: 방 목록 정렬값은 메시지와 같은 트랜잭션에서 전진시킨다.
         rooms.advanceLastMessageId(roomId, saved.id());
-        // 계획 7 세부 4: 롤백된 메시지를 보내지 않도록 리스너가 커밋 뒤에 받는다
+        // ADR-132: 롤백된 메시지를 보내지 않도록 리스너가 커밋 뒤에 받는다
         events.publishEvent(new MessageSentEvent(saved, origin.startedNanos(), origin.transport()));
         return saved;
     }

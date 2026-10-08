@@ -19,7 +19,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 프레임 처리를 별도 빈의 public 메서드에 둔다. 핸들러 안에서 자기 호출하면 AOP가 가로채지 못한다
- * (계획 7 세부 7A·7B).
+ * (ADR-135·136).
  */
 @Component
 public class ChatFrameHandler {

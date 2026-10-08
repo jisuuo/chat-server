@@ -71,7 +71,7 @@ describe('App', () => {
     expect(screen.getByText('사용자 #12')).toBeInTheDocument()
   })
 
-  it('사용자 연결을 열고, ?transport=polling이면 열지 않는다 (계획 7 세부 10)', () => {
+  it('사용자 연결을 열고, ?transport=polling이면 열지 않는다 (ADR-139)', () => {
     sessionStorage.setItem('chat.userId', '3')
     const { unmount } = render(<App />)
     expect(screen.getByTestId('socket')).toHaveAttribute('data-user', '3')

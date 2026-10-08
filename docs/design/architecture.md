@@ -8,8 +8,8 @@
              [1. 추출: 통로별]                 [2. 판별: 단 한 곳]           [3. 전달: 사용처별]
 HTTP 요청  → AuthFilter (X-User-Id 헤더)    ┐                              → @CurrentUser AuthUser
                                             ├→ Authenticator.authenticate()
-WebSocket  → HandshakeInterceptor           ┘   지금: HeaderUserIdAuthenticator → WebSocketSession attributes
-             (query/cookie, Step 2에서 결정)     나중: JwtAuthenticator
+WebSocket  → QueryUserIdHandshakeInterceptor┘   지금: HeaderUserIdAuthenticator → WebSocketSession attributes
+             (`/ws?userId=`, ADR-130)           나중: JwtAuthenticator
 
 [인가] "이 유저가 이 방의 멤버인가?"는 인증 층이 아니라 도메인(멤버십, R3)이 판단한다. 흐름은 MessageService가 맡는다 (ADR-037).
 ```
@@ -21,7 +21,7 @@ WebSocket  → HandshakeInterceptor           ┘   지금: HeaderUserIdAuthenti
   - 닉네임 등 표시용 정보는 넣지 않는다 (토큰 만료 전까지 stale해지는 문제).
 - 존재 여부를 DB로 확인하지 않는다. 폴링 요청마다 쿼리가 추가되면 F1(커넥션 풀 고갈)을 앞당긴다. 형식만 검증한다.
 - ThreadLocal 대신 파라미터로 명시적으로 넘긴다. 비동기 전송(Step 2, F4 해결)에서 ThreadLocal 값이 사라지는 문제를 피한다.
-- 브라우저 WebSocket API는 커스텀 헤더를 보낼 수 없다. WebSocket 인증 방식은 Step 2에서 다시 의논한다.
+- 브라우저 WebSocket API는 커스텀 헤더를 보낼 수 없어 `/ws?userId=`로 전달한다(ADR-130). 핸드셰이크에서 `Authenticator`가 한 번 형식을 검사해 `AuthUser`를 세션 속성에 담고, 실패는 401과 인증 실패 감사 이벤트로 남긴다. 프레임마다 다시 인증하지 않으며, 사용자 존재 여부도 조회하지 않는다.
 
 ## API 명세 (ADR-017)
 
@@ -83,6 +83,8 @@ HTTP 요청 → RequestLogContextFilter (서버 UUID, IP, MDC, 응답 헤더)
 - 추적 ID: 가장 먼저 실행되는 필터가 요청마다 UUID를 새로 만들고 MDC `requestId`와 응답 `X-Request-Id`에 넣는다. 클라이언트가 보낸 같은 이름의 헤더는 무시한다. `server.forward-headers-strategy: native`가 내부 프록시의 `X-Forwarded-For`를 처리한 뒤 `getRemoteAddr()`를 MDC `clientIp`로 쓴다. 실제 Tomcat 테스트에서 외부에서 직접 보낸 위조 헤더는 반영되지 않았다.
 - 로그: 콘솔은 `[requestId]`가 보이는 텍스트, 파일은 ECS JSON이다. `LOG_DIR` 기본값은 `logs`이므로 `bootRun`의 파일은 `backend/logs/`에 있다. 테스트는 `backend/build/test-logs/`를 쓴다. app은 10MB 단위·3일·총 200MB, audit은 10MB 단위·30일·총 500MB로 회전한다.
 - 접근 로그: 최상위 필터의 `finally`에서 `ACCESS` 한 줄에 `method`, `path`, `query`, `status`, `durationMs`를 남긴다. 인증 실패 401도 포함하고 `/actuator/**`는 제외한다. 인증 성공 후에는 `AuthFilter`가 MDC에 넣은 `userId`도 함께 기록되며 필터가 요청 끝에 MDC를 지운다. `local`·`prod`에서는 켜고 `bench`에서는 꺼 성능 실험에 미치는 영향을 줄인다.
+- WebSocket 접근 로그: 핸드셰이크는 위 HTTP `ACCESS`에 `/ws`·101로 남는다. 그 뒤 접속·프레임·종료는 AOP의 `WS_ACCESS`가 `event`, `sessionId`, `frameType`, `roomId`, `result`, `durationMs`, `closeCode`로 기록한다(해당하는 필드만). 이벤트마다 새 `requestId`를 만들고 `userId`와 함께 MDC에 둔다. `bench`에서는 끈다(ADR-136). 기존 `ACCESS`·`AUDIT`·예외 로그는 각각 필터·커밋 후 리스너·전역 예외 처리에 둔다.
+- WebSocket 지표: `chat.ws.sessions`(현재 저장소 세션 수), `chat.ws.frames{type}`(송수신 프레임 수), `chat.delivery.stage{stage,transport}`(`receive`·`save`·`fanout`·세션별 `push`), `chat.delivery.total{transport}`(수신 시작부터 fan-out 정상 종료까지)를 노출한다. 현재 동기 경로의 `receive ⊃ save ⊃ fanout ⊃ push` 단계 시간은 겹치므로 합산하지 않는다(ADR-129·135). Prometheus에서는 `_seconds`와 `_count` 등으로 변환된다.
 - 감사 로그: 아래 이벤트 리스너가 업무 결과를 기록한다. 접근 로그와 감사 로그는 같은 `requestId`로 연결된다. 메시지 본문은 기록하지 않는다.
 - 모니터링 도구는 `infra/compose.monitoring.yml`의 `metrics`와 `logs` 프로필로 필요할 때만 켠다. 부하 측정에서는 Docker 자원 경쟁을 고려해 켠 프로필을 기록한다.
 
@@ -144,13 +146,14 @@ chat-server/
 
 ```
 개발: 브라우저 → Vite 개발 서버(5173) ─┬─ 화면: 직접 응답 (실시간 변환, 저장 즉시 반영 HMR)
-                                      └─ /api: 8080으로 전달
+                                      ├─ /api: 8080으로 전달
+                                      └─ /ws: WebSocket Upgrade를 8080으로 전달
 운영: 브라우저 → nginx ─┬─ 화면: 빌드된 정적 파일 (vite build 결과)
                        └─ /api: Spring 백엔드로 전달 (Step 3에서 서버 2대로 분배)
 ```
 - 개발은 Vite: 고친 코드를 바로 보는 것이 중요하다 (작업실).
 - 운영은 nginx: 완성 파일을 빠르게 많은 사용자에게 주고, 여러 서버로 분배하고, WebSocket과 HTTPS를 처리한다 (매장). Vite 개발 서버는 공식적으로 운영용이 아니다.
-- 한계: proxy를 거치면 백엔드가 보는 요청 IP가 proxy의 IP가 된다. 감사 로그(ADR-023)에 실제 IP를 남기려면 `X-Forwarded-For`를 읽도록 설정한다. WebSocket 전달은 Step 2에서 `ws: true` 설정을 추가한다. k6 부하 테스트는 브라우저가 아니라 CORS와 무관하며 백엔드에 직접 요청한다.
+- 한계: proxy를 거치면 백엔드가 보는 요청 IP가 proxy의 IP가 된다. 감사 로그(ADR-023)에 실제 IP를 남기려면 `X-Forwarded-For`를 읽도록 설정한다. `/ws`에는 `ws: true`를 설정했다(ADR-141). 로컬 Chrome·Playwright에서 Vite proxy 뒤 핸드셰이크 101과 메시지 push를 확인했고 Origin 403은 관찰되지 않았다. k6 부하 테스트는 브라우저가 아니라 CORS와 무관하며 백엔드에 직접 요청한다.
 
 ### 계획 4 프론트엔드 구현과 직접 확인 (ADR-081 ~ 087)
 

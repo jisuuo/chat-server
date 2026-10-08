@@ -21,7 +21,7 @@ import org.springframework.web.socket.WebSocketSession;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 계획 7 결정 D5·세부 7B: WS 이벤트마다 새 요청 ID를 붙인다. userId와 requestId는 ECS 중복 필드를 피하려고 MDC에만 둔다. */
+/** ADR-136: WS 이벤트마다 새 요청 ID를 붙인다. userId와 requestId는 ECS 중복 필드를 피하려고 MDC에만 둔다. */
 @Aspect
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)

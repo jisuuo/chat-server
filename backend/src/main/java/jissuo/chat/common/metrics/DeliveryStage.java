@@ -5,7 +5,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** 계획 7 세부 7A: Spring을 모르는 domain 대신 빈의 공개 메서드에 단계를 표시한다. */
+/** ADR-135: Spring을 모르는 domain 대신 빈의 공개 메서드에 단계를 표시한다. */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DeliveryStage {

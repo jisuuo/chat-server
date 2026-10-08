@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-/** 세션 하나에 프레임 하나를 보낸다. push 단계 시간(계획 7 세부 7A)을 세션마다 재려고 별도 빈으로 둔다. */
+/** 세션 하나에 프레임 하나를 보낸다. push 단계 시간(ADR-135)을 세션마다 재려고 별도 빈으로 둔다. */
 @Component
 public class WsFrameSender {
 

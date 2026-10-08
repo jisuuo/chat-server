@@ -25,7 +25,7 @@ public class WsMessagePusher implements MessagePusher {
 
     @Override
     public void push(List<Long> userIds, Message message, DeliveryOrigin origin) {
-        // 계획 7 결정 D3: 본문 전체를 한 번만 직렬화해 모든 탭에 같은 프레임을 보낸다
+        // ADR-131: 본문 전체를 한 번만 직렬화해 모든 탭에 같은 프레임을 보낸다
         TextMessage frame = new TextMessage(json.writeValueAsString(MessageFrame.of(MessageResponse.from(message))));
         for (long userId : userIds) {
             // F3: 스레드 안전하지 않은 목록을 복사하지 않고 그대로 순회한다 (재현 전)

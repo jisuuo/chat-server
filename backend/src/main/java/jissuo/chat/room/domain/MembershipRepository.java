@@ -9,7 +9,7 @@ public interface MembershipRepository {
 
     Optional<Membership> find(long roomId, long userId);
 
-    /** 계획 7 세부 4: fan-out 대상. 오름차순 */
+    /** ADR-132: fan-out 대상. 오름차순 */
     List<Long> findUserIds(long roomId);
 
     /** @return 지운 행이 있으면 true */

@@ -59,7 +59,7 @@ class ChatFrameHandlerTest {
         ArgumentCaptor<DeliveryOrigin> origin = ArgumentCaptor.forClass(DeliveryOrigin.class);
         verify(messages).send(eq(7L), eq(3L), eq("안녕"), origin.capture());
         assertThat(origin.getValue().transport()).isEqualTo("ws");
-        // 계획 7 세부 3: 응답 짝 맞춤 없이 보낸 사람도 message push로 받는다
+        // ADR-131: 응답 짝 맞춤 없이 보낸 사람도 message push로 받는다
         verify(session, never()).sendMessage(any());
         assertThat(meters.get("chat.ws.frames").tag("type", "send").counter().count()).isEqualTo(1);
     }

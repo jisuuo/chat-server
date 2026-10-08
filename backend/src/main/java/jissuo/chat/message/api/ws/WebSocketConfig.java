@@ -20,7 +20,7 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // 계획 7 세부 1, ADR-028: 허용 origin을 지정하지 않아 Spring 기본(같은 origin만)을 쓴다
+        // ADR-130, ADR-028: 허용 origin을 지정하지 않아 Spring 기본(같은 origin만)을 쓴다
         registry.addHandler(handler, "/ws").addInterceptors(authentication);
     }
 }

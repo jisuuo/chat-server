@@ -8,7 +8,7 @@ HTTP 폴링 → WebSocket → 서버 2대 → Redis로 확장하는 채팅 서�
 
 - 기술: Java 21, Spring Boot 4.1.1, Gradle Kotlin DSL(단일 모듈, 패키지 `jissuo.chat`), `JdbcClient`·JPA(설정으로 선택), Flyway, MySQL 8.4.11 / PostgreSQL 18.6 (DB는 측정 후 선택, ADR-003)
 - 쓰지 않는 것: Spring Security, H2(잠금·커밋 동작이 실제 DB와 달라서)
-- 현재 위치: Step 1(단일 서버 + REST + 폴링). 계획 6 UI 개편과 JDBC·JPA 기능 계약 검증 완료. Membership 중복 입장 실패(F34)는 해결했다. W1~W5 부하·기동·힙 비교는 나머지 계획 뒤로 연기했다(ADR-128). 기본 저장소는 JDBC이며 MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106). 결과는 `docs/reports/2026-10-08-jdbc-vs-jpa.md`에 있다.
+- 현재 위치: Step 2, 계획 7(WebSocket 서버 1대) 기능 완료·장애 재현(F3~F6) 진행 전. 기본 채팅은 WebSocket이며 `?transport=polling`은 비교용으로 유지한다. 계획 6 UI 개편과 JDBC·JPA 기능 계약 검증 완료. Membership 중복 입장 실패(F34)는 해결했다. W1~W5 부하·기동·힙 비교는 나머지 계획 뒤로 연기했다(ADR-128). 기본 저장소는 JDBC이며 MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106). 결과는 `docs/reports/2026-10-08-jdbc-vs-jpa.md`에 있다.
 
 ## 명령어
 
@@ -29,6 +29,7 @@ npm ci
 npm run dev       # 브라우저 http://localhost:5173
 npm test
 npm run e2e       # Playwright가 local,mysql 백엔드와 Vite를 자동 기동할 수 있음
+# URL에 ?transport=polling을 붙이면 기존 폴링으로 대화한다 (Step 6 비교용)
 
 # 모니터링 (저장소 루트에서, 앱은 backend/bootRun으로 따로 실행)
 docker compose -f infra/compose.monitoring.yml --profile metrics up -d --wait  # Prometheus 19090, Grafana 13000
@@ -42,7 +43,7 @@ docker compose -f infra/compose.monitoring.yml --profile logs up -d --wait     #
 - **패키지**: 기능별(`room`, `message`, `user`) × 4계층(`domain`, `application`, `infra/jdbc|jpa`, `api`) + 기술 관심사(`auth`, `audit`, `common`).
 - **의존 방향** (ArchUnit으로 검사): `api → application → domain ← infra`. `domain`은 Spring도 모른다. 기능 사이에는 `message → room.domain`만 허용한다(`RoomService` 호출 금지). `room`·`message`는 `user`를 모르고 `userId` 값과 DB FK로만 연결한다.
 - **애그리거트**: `Room`, `Membership`(둘 다 `room` 패키지), `Message`. 서로 id로만 참조한다.
-- **인증**: `AuthFilter`가 `X-User-Id`를 `Authenticator`에 넘기고, 형식만 검사한다(DB 조회 없음). 컨트롤러는 `@CurrentUser AuthUser`로 받는다(ThreadLocal 쓰지 않음). `/api/dev/**`는 인증에서 제외한다. 멤버인지 판단(인가)은 서비스가 `room_members` 행으로 한다.
+- **인증**: `AuthFilter`가 `X-User-Id`를 `Authenticator`에 넘기고, 형식만 검사한다(DB 조회 없음). WebSocket은 `/ws?userId=`를 핸드셰이크에서 같은 `Authenticator`로 한 번 검사한다(ADR-130). 컨트롤러는 `@CurrentUser AuthUser`로 받는다(ThreadLocal 쓰지 않음). `/api/dev/**`는 인증에서 제외한다. 멤버인지 판단(인가)은 서비스가 `room_members` 행으로 한다.
 - **응답**: 모두 `ApiResponse`이고 `ok()`/`fail()`로만 만든다. HTTP 상태 코드는 실제 결과대로 준다. 예외 변환은 `@RestControllerAdvice` 한 곳에서 한다.
 - **설정으로 구현 선택**: `chat.repository=jdbc|jpa`(기본 `jdbc`; JPA는 메시지 스키마 A만), `chat.message-schema=A|B`(messages PK 비교: `id` 단독 / `(room_id, id)`), `chat.join-boundary=id|time`(재입장 경계: `joined_message_id` / `joined_at`). JDBC 통합 테스트는 두 DB × 스키마 A/B, JPA는 두 DB × 스키마 A에서 같은 계약을 보장한다.
 - **Flyway**: DB별 스크립트가 따로 있다. `backend/src/main/resources/db/migration/{mysql,postgresql}`

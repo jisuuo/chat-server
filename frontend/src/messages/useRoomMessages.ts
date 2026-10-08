@@ -92,7 +92,7 @@ export function useRoomMessages(userId: number, roomId: number): RoomMessages {
 
   useEffect(() => {
     if (transport !== 'websocket' || socket === null || status !== 'ready') return
-    // 계획 7 세부 9: 다른 방 메시지는 무시한다(방 목록 자동 갱신 없음, ADR-084). 내 메시지도 push로 받는다.
+    // ADR-138: 다른 방 메시지는 무시한다(방 목록 자동 갱신 없음, ADR-084). 내 메시지도 push로 받는다.
     // 구독 전에 온 push는 받지 않는다(F49, 장애 선행)
     return socket.subscribe((frame) => {
       if (frame.type === 'message') {
@@ -123,7 +123,7 @@ export function useRoomMessages(userId: number, roomId: number): RoomMessages {
 
   async function send(content: string) {
     if (transport === 'websocket') {
-      // 계획 7 세부 3: 응답 짝 맞춤이 없어 성공은 "보냈다"까지만 안다. 결과는 message push나 error 프레임으로 온다.
+      // ADR-131: 응답 짝 맞춤이 없어 성공은 "보냈다"까지만 안다. 결과는 message push나 error 프레임으로 온다.
       // 전송 중 비활성화·낙관적 표시는 하지 않는다(ADR-034, F33)
       if (socket?.send(roomId, content)) {
         setError(null)

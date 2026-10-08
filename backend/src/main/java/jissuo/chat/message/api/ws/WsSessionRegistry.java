@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
 /**
- * 사용자 → 탭들의 세션. 계획 7 결정 D6: 흔한 구현 그대로 스레드 안전하지 않은 HashMap·ArrayList를 쓴다.
+ * 사용자 → 탭들의 세션. ADR-134: 흔한 구현 그대로 스레드 안전하지 않은 HashMap·ArrayList를 쓴다.
  * 동시 접속·종료·push 순회가 겹칠 때의 문제(F3)를 재현한 뒤 사용자와 보완을 정한다.
  */
 @Component

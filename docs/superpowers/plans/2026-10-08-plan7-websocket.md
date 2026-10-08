@@ -1,6 +1,6 @@
 # 계획 7: WebSocket 서버 1대 구현 계획 (Step 2, 고도화 P7)
 
-> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 커밋·푸시 완료. 웨이브 2(작업 3·6), 웨이브 3(작업 4·7), 웨이브 4(작업 13) 구현 및 통합 검증 완료. 웨이브 5 승인 대기.
+> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 커밋·푸시 완료. 웨이브 2(작업 3·6), 웨이브 3(작업 4·7), 웨이브 4(작업 13), 웨이브 5(작업 8) 구현·통합 검증 완료. 다음은 웨이브 6(작업 9, F3 세션 저장소 동시성 재현).
 
 > **실행하는 에이전트에게**: 작업은 아래 "실행 순서와 병렬화"의 **웨이브 단위로 사용자 승인을 받고** 시작한다. 같은 웨이브의 작업은 동시에 진행할 수 있다. 웨이브가 끝나면 통합 확인을 하고 결과(테스트 출력 포함)를 보고한 뒤 멈춘다. **커밋하지 않는다** (사용자가 요청할 때만). 단계는 체크박스(`- [ ]`)로 추적한다. 장애 재현 작업(9~12)은 웨이브마다 멈추고 측정값과 예상을 나눠 보고한다.
 
@@ -2994,7 +2994,7 @@ logging:
 - Modify: `docs/adr/2026-10-08.md`(실행한 날짜의 파일), `docs/journal/2026-10-08.md`(실행한 날짜), `docs/failure-lab.md`, `docs/design/architecture.md`(인증·관측·같은 주소 절), `docs/README.md`(현재 위치), `CLAUDE.md`(현재 위치, 명령어의 `?transport=polling` 한 줄), 이 계획서의 진행 상태·체크박스
 - 코드 주석의 `계획 7 세부 #n`, `계획 7 결정 Dn`을 ADR 번호로 바꾼다(`grep -rn '계획 7' backend/src frontend/src`)
 
-- [ ] **Step 1: E2E 갱신** — `frontend/e2e/chat.spec.ts`
+- [x] **Step 1: E2E 갱신** — `frontend/e2e/chat.spec.ts`
   - 상수와 도우미를 바꾼다:
 ```ts
 // 기본 폴링 주기 2초(ADR-083)보다 넉넉하게 기다린다
@@ -3090,24 +3090,24 @@ test('?transport=polling이면 기존 폴링으로 대화한다 (Step 6 비교�
 ```
   - 실행: DB를 띄운 뒤(`docker compose -f infra/compose.db.yml up -d --wait`) `cd frontend && npm run e2e`. 실패하면 원인(특히 Vite proxy 뒤 Origin 검사 403 여부)을 보고하고 멈춘다. 테스트 기대를 임의로 느슨하게 하지 않는다.
 
-- [ ] **Step 2: 브라우저 확인** — 백엔드 `./gradlew bootRun --args='--spring.profiles.active=local,mysql'`, 프론트 `npm run dev`. 결과는 일지에 "측정"으로 적는다.
+- [x] **Step 2: 브라우저 확인** — 백엔드 `./gradlew bootRun --args='--spring.profiles.active=local,mysql'`, 프론트 `npm run dev`. 결과는 일지에 "측정"으로 적는다. Network 프레임 JSON은 E2E에서 확인하고, 브라우저에서는 수신·비멤버 오류·재연결·F6 예비 누락을 확인했다.
   1. 두 탭(두 사용자)에서 한쪽이 보내면 다른 쪽에 바로 보인다. "연결 상태" 패널의 받은 프레임 수가 늘고, Network의 `messages?after=` 요청은 늘지 않는다.
   2. 개발자 도구 Network → WS → `/ws?userId=` 연결의 Messages에서 `send`·`message` 프레임 JSON을 본다. 비멤버 방에서 보내기(다른 탭에서 나간 뒤)로 `error` 프레임을 본다.
   3. 백엔드를 재시작한다. 패널이 "끊김"(종료 코드 1006 또는 1001) → 약 1초 뒤 "연결 중"·"연결됨", 재연결 횟수 1. 재시작하는 동안 다른 사용자가 REST로 보낸 메시지(예: `curl`)는 새로고침 전까지 보이지 않는다(F6 예고, 측정).
   4. `?transport=polling`으로 열면 "폴링 상태" 패널과 기존 동작 그대로.
   5. `backend/logs/app.json`에서 `WS_ACCESS` 행(connect·frame·close, requestId, userId)과 핸드셰이크의 `ACCESS` 행(`/ws`, 101)을 찾는다. `/actuator/prometheus`에서 `chat_ws_sessions`, `chat_delivery_stage_seconds{stage,transport}`, `chat_delivery_total_seconds{transport}`를 본다.
 
-- [ ] **Step 3: 장애 가설 기록** — `docs/failure-lab.md` 표와 본문에 F43~F49(위 "예상되는 문제" 표)를 가설로 추가한다. F50은 코드 리뷰 뒤 먼저 기록했으므로 재현 상태와 결정 항목을 유지한다. 작업 3 Step 6의 "기존 실험 조건 변화(전송마다 멤버 조회 1회 추가)"를 기록한다.
+- [x] **Step 3: 장애 가설 기록** — `docs/failure-lab.md` 표와 본문에 F43~F49(위 "예상되는 문제" 표)를 가설로 추가한다. F50은 코드 리뷰 뒤 먼저 기록했으므로 재현 상태와 결정 항목을 유지한다. 작업 3 Step 6의 "기존 실험 조건 변화(전송마다 멤버 조회 1회 추가)"를 기록한다.
 
-- [ ] **Step 4: ADR 기록** — `docs/adr/<실행한 날짜>.md`의 계획 7 절에 다음 빈 번호(ADR-130 예상)부터 기록한다(결정 / 이유 / 포기한 것). 전달 시간 지표·부하 측정 표본은 ADR-129로 먼저 기록했다. 순서: 사용자 결정 D1~D6(**특히 D5 AOP 로그 범위**: 접속·프레임·종료 로그와 전달 시간만 AOP로 하고 ACCESS·AUDIT·예외 로그는 그대로 둔 이유 세 가지 — 필터 밖 401·404 누락, 감사의 커밋 시점, 예외 중복 기록), 세부 #1~#12와 #7A·#7B(보완 내용 포함).
+- [x] **Step 4: ADR 기록** — `docs/adr/<실행한 날짜>.md`의 계획 7 절에 다음 빈 번호(ADR-130 예상)부터 기록한다(결정 / 이유 / 포기한 것). 전달 시간 지표·부하 측정 표본은 ADR-129로 먼저 기록했다. 순서: 사용자 결정 D1~D6(**특히 D5 AOP 로그 범위**: 접속·프레임·종료 로그와 전달 시간만 AOP로 하고 ACCESS·AUDIT·예외 로그는 그대로 둔 이유 세 가지 — 필터 밖 401·404 누락, 감사의 커밋 시점, 예외 중복 기록), 세부 #1~#12와 #7A·#7B(보완 내용 포함).
 
-- [ ] **Step 5: 설계 문서** — `docs/design/architecture.md`
+- [x] **Step 5: 설계 문서** — `docs/design/architecture.md`
   - 인증 절: WebSocket 핸드셰이크의 쿼리 `userId` 추출(`QueryUserIdHandshakeInterceptor`), 실패 시 401과 감사, 프레임마다 다시 검사하지 않음.
   - 관측 절: `WS_ACCESS` 로그 필드, 이벤트마다 새 요청 ID, bench OFF. 지표 `chat.ws.sessions`, `chat.ws.frames{type}`, `chat.delivery.stage{stage,transport}`, `chat.delivery.total{transport}`와 단계가 겹친다는 점.
   - "같은 주소로 서비스하는 이유" 절의 "WebSocket 전달은 Step 2에서 `ws: true` 설정을 추가한다"를 실제 상태로 바꾸고 Step 2 Origin 관찰 결과를 적는다.
   - `docs/README.md`, `CLAUDE.md` 현재 위치를 "계획 7(WebSocket 1대) 기능 완료, 장애 재현(F3~F6) 진행 전"으로 바꾸고, `CLAUDE.md` 명령어 절의 프론트 항목에 "`?transport=polling`이면 기존 폴링" 한 줄을 추가한다. 일지에 작업 결과·브라우저 확인을 적는다.
 
-- [ ] **Step 6: 최종 확인** — `cd backend && ./gradlew test`, `cd frontend && npx vitest run && npx tsc -b && npm run lint && npm run e2e`. 출력과 함께 보고하고 멈춘다.
+- [x] **Step 6: 최종 확인** — `cd backend && ./gradlew test` → 434건 통과(실패·오류·건너뜀 0), `cd frontend && npx vitest run` → 21개 파일·106건 통과, `npx tsc -b`와 `npm run lint` 통과, `npm run e2e` → Chromium 5건 통과. 출력과 함께 보고하고 멈춘다.
 
 ---
 

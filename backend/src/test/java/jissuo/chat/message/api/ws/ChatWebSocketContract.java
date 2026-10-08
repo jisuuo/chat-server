@@ -22,7 +22,7 @@ import org.springframework.jdbc.support.GeneratedKeyHolder;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** 계획 7: WebSocket 수신·전송 계약. 두 DB에서 같은 결과를 보장한다 (JDBC 기본 저장소). */
+/** ADR-131: WebSocket 수신·전송 계약. 두 DB에서 같은 결과를 보장한다 (JDBC 기본 저장소). */
 abstract class ChatWebSocketContract {
 
     @LocalServerPort int port;
@@ -73,7 +73,7 @@ abstract class ChatWebSocketContract {
         for (WsTestClient tab : List.of(memberTab1, memberTab2, senderTab)) {
             JsonNode frame = json.readTree(tab.next());
             assertThat(frame.get("type").asString()).isEqualTo("message");
-            // 계획 7 결정 D3: REST 응답(MessageResponse)과 같은 모양
+            // ADR-131: REST 응답(MessageResponse)과 같은 모양
             assertThat(frame.get("message")).isEqualTo(sent);
         }
     }

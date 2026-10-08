@@ -16,7 +16,7 @@ const msg = (id: number, senderId = 2): Message => ({ id, roomId: 1, senderId, c
 const page = (messages: Message[], hasMore = false) => ({ data: { messages, hasMore }, info })
 
 describe('useRoomMessages', () => {
-  // 계획 7 세부 10: 기존 테스트는 ?transport=polling 회귀로 남긴다
+  // ADR-139: 기존 테스트는 ?transport=polling 회귀로 남긴다
   beforeEach(() => {
     vi.resetAllMocks()
     window.history.replaceState(null, '', '/?transport=polling')
@@ -119,7 +119,7 @@ describe('useRoomMessages (websocket)', () => {
     expect(ok).toBe(true)
     expect(fake.sent).toEqual([{ roomId: 1, content: '안녕' }])
     expect(chat.sendMessage).not.toHaveBeenCalled()
-    // 계획 7 세부 3: 낙관적 표시 없음(F33). 서버 push가 와야 보인다
+    // ADR-131: 낙관적 표시 없음(F33). 서버 push가 와야 보인다
     expect(result.current.messages.map((m) => m.id)).toEqual([1])
     act(() => fake.push({ type: 'message', message: msg(2, 1) }))
     expect(result.current.messages.map((m) => m.id)).toEqual([1, 2])

@@ -26,7 +26,7 @@ describe('ChatSocketProvider', () => {
     expect(stop).toHaveBeenCalled()
   })
 
-  it('enabled가 아니면 연결하지 않고 소켓을 내주지 않는다 (계획 7 세부 10)', () => {
+  it('enabled가 아니면 연결하지 않고 소켓을 내주지 않는다 (ADR-139)', () => {
     const fake = fakeChatSocket()
     const start = vi.spyOn(fake.socket, 'start')
     vi.mocked(chatSocket.createChatSocket).mockReturnValue(fake.socket)

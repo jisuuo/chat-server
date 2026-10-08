@@ -4,7 +4,7 @@ const STATE_LABEL: Record<ConnectionState, string> = { connecting: '연결 중',
 
 type Props = { stats: SocketStats }
 
-// 계획 7 세부 11: 폴링 패널(ADR-081)과 같은 자리에서 연결을 관찰한다. 종료 코드 1006은 비정상 종료다
+// ADR-140: 폴링 패널(ADR-081)과 같은 자리에서 연결을 관찰한다. 종료 코드 1006은 비정상 종료다
 export function ConnectionPanel({ stats }: Props) {
   return (
     <aside aria-label="연결 상태" className="panel">

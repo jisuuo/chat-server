@@ -14,7 +14,7 @@ import org.springframework.web.socket.server.HandshakeInterceptor;
 
 /**
  * 브라우저 WebSocket API는 헤더를 붙일 수 없어 쿼리에서 꺼낸다. 판별은 HTTP와 같은 Authenticator가 한다
- * (계획 7 결정 D1, ADR-005·006과 같은 신뢰 수준). 핸드셰이크에서 한 번만 검사하고 프레임마다 다시 보지 않는다.
+ * (ADR-130, ADR-005·006과 같은 신뢰 수준). 핸드셰이크에서 한 번만 검사하고 프레임마다 다시 보지 않는다.
  */
 @Component
 public class QueryUserIdHandshakeInterceptor implements HandshakeInterceptor {

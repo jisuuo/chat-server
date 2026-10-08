@@ -37,7 +37,7 @@ export default function App() {
 
   return (
     <NicknameProvider key={userId}>
-      {/* 계획 7 세부 8·10: 사용자 연결은 탭마다 하나. polling 모드에서는 열지 않는다 */}
+      {/* ADR-137·139: 사용자 연결은 탭마다 하나. polling 모드에서는 열지 않는다 */}
       <ChatSocketProvider key={userId} userId={userId} enabled={currentTransport() === 'websocket'}>
         {/* ADR-107: 좁은 화면에서는 data-view로 목록과 대화 중 하나만 보인다 */}
         <div className="app" data-view={roomId === null ? 'rooms' : 'room'}>

@@ -19,7 +19,7 @@ export type ChatSocket = {
 }
 type Options = { url?: string; open?: (url: string) => WebSocket }
 
-// 계획 7 결정 D1: 브라우저 WebSocket은 헤더를 붙일 수 없어 쿼리로 보낸다. ADR-028: 같은 origin
+// ADR-130: 브라우저 WebSocket은 헤더를 붙일 수 없어 쿼리로 보낸다. ADR-028: 같은 origin
 export function socketUrl(userId: number, location: Pick<Location, 'protocol' | 'host'> = window.location): string {
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws'
   return `${scheme}://${location.host}/ws?userId=${userId}`
@@ -65,7 +65,7 @@ export function createChatSocket(userId: number, options: Options = {}): ChatSoc
       current = null
       update({ state: 'closed', lastCloseCode: event.code })
       if (!running) return
-      // 계획 7 세부 8: 고정 1초 뒤 다시 연결한다. 지수 대기·지터는 F17(Step 3)에서,
+      // ADR-137: 고정 1초 뒤 다시 연결한다. 지수 대기·지터는 F17(Step 3)에서,
       // 끊긴 동안 온 메시지는 따라잡지 않는다(F6, 장애 선행)
       timer = setTimeout(() => {
         update({ reconnects: stats.reconnects + 1 })

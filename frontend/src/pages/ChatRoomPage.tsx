@@ -27,7 +27,7 @@ export function ChatRoomPage({ userId, roomId, title, onBack }: Props) {
         <h2>{title}</h2>
         {room.status === 'ready' && (
           <>
-            {/* ADR-114: 관측용 패널(ADR-081)은 남기되 평소에는 접어 둔다. 계획 7 세부 11: 통로에 따라 내용이 다르다 */}
+            {/* ADR-114: 관측용 패널(ADR-081)은 남기되 평소에는 접어 둔다. ADR-140: 통로에 따라 내용이 다르다 */}
             <details className="debug">
               <summary>{room.transport === 'polling' ? '폴링 상태' : '연결 상태'}</summary>
               {room.transport === 'polling' ? (

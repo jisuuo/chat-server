@@ -11,7 +11,7 @@ import org.springframework.web.socket.TextMessage;
 
 /**
  * ADR-002: 순수 WebSocketHandler. TextWebSocketHandler를 상속하지 않는 이유는 handleMessage가 handleTextMessage를
- * 자기 호출해 AOP 프록시(계획 7 세부 7B)가 가로채지 못하기 때문이다.
+ * 자기 호출해 AOP 프록시(ADR-136)가 가로채지 못하기 때문이다.
  */
 @Component
 public class ChatWebSocketHandler implements WebSocketHandler {
@@ -31,7 +31,7 @@ public class ChatWebSocketHandler implements WebSocketHandler {
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        // 계획 7 세부 3: 텍스트만 처리한다. 바이너리·pong은 무시한다(ping/pong 없음, F5)
+        // ADR-131: 텍스트만 처리한다. 바이너리·pong은 무시한다(ping/pong 없음, F5)
         if (message instanceof TextMessage text) {
             frames.handle(session, text.getPayload());
         }
