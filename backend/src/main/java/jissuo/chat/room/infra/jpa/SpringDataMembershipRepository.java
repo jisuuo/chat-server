@@ -1,11 +1,15 @@
 package jissuo.chat.room.infra.jpa;
 
+import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.transaction.annotation.Transactional;
 
 interface SpringDataMembershipRepository extends JpaRepository<MembershipEntity, MembershipId> {
+
+    @Query("SELECT m.id.userId FROM MembershipEntity m WHERE m.id.roomId = :roomId ORDER BY m.id.userId")
+    List<Long> findUserIds(long roomId);
 
     // ADR-010: 삭제한 행 수로 기존 멤버 여부를 판단한다.
     @Transactional

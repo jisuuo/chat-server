@@ -116,6 +116,33 @@ public abstract class MembershipRepositoryContract {
         assertThat(repository.find(otherRoom, userId)).isPresent();
     }
 
+    @Test
+    void 방의_멤버_id를_오름차순으로_돌려준다() {
+        long second = insertUser();
+        long otherRoom = rooms.save(new RoomName("다른 방"), userId, AT);
+        repository.save(new Membership(roomId, second, new JoinBoundary(0, AT)));
+        repository.save(new Membership(roomId, userId, new JoinBoundary(0, AT)));
+        repository.save(new Membership(otherRoom, insertUser(), new JoinBoundary(0, AT)));
+
+        assertThat(repository.findUserIds(roomId)).containsExactly(userId, second);
+    }
+
+    @Test
+    void 멤버가_없는_방은_빈_목록이다() {
+        assertThat(repository.findUserIds(roomId)).isEmpty();
+    }
+
+    @Test
+    void 나간_사용자는_멤버_id에서_빠진다() {
+        // 계획 7 세부 4: push 대상은 커밋된 멤버 행 기준이다 (나가기와의 경쟁은 F46으로 남긴다)
+        long second = insertUser();
+        repository.save(new Membership(roomId, userId, new JoinBoundary(0, AT)));
+        repository.save(new Membership(roomId, second, new JoinBoundary(0, AT)));
+        repository.delete(roomId, userId);
+
+        assertThat(repository.findUserIds(roomId)).containsExactly(second);
+    }
+
     // room은 user 패키지를 모르므로(의존 방향 규칙) 테스트도 SQL로 사용자를 만든다
     private long insertUser() {
         var keyHolder = new GeneratedKeyHolder();

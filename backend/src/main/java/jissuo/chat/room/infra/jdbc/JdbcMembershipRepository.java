@@ -4,6 +4,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import jissuo.chat.common.ChatException;
 import jissuo.chat.common.ErrorCode;
@@ -58,6 +59,15 @@ public class JdbcMembershipRepository implements MembershipRepository {
                 .param("userId", userId)
                 .query(JdbcMembershipRepository::toMembership)
                 .optional();
+    }
+
+    @Override
+    public List<Long> findUserIds(long roomId) {
+        // PK (room_id, user_id)의 앞부분으로 찾는다
+        return jdbc.sql("SELECT user_id FROM room_members WHERE room_id = :roomId ORDER BY user_id")
+                .param("roomId", roomId)
+                .query(Long.class)
+                .list();
     }
 
     @Override

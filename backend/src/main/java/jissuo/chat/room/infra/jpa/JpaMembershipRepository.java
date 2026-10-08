@@ -3,6 +3,7 @@ package jissuo.chat.room.infra.jpa;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Optional;
 import jissuo.chat.common.ChatException;
 import jissuo.chat.common.ErrorCode;
@@ -39,6 +40,11 @@ public class JpaMembershipRepository implements MembershipRepository {
     @Override
     public Optional<Membership> find(long roomId, long userId) {
         return memberships.findById(new MembershipId(roomId, userId)).map(JpaMembershipRepository::toMembership);
+    }
+
+    @Override
+    public List<Long> findUserIds(long roomId) {
+        return memberships.findUserIds(roomId);
     }
 
     @Override
