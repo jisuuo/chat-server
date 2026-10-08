@@ -15,10 +15,12 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 /** 서버가 보낸 텍스트 프레임을 큐에 모으는 테스트용 클라이언트. 실험에서도 쓴다. */
 public final class WsTestClient implements AutoCloseable {
 
+    public record ReceivedFrame(String payload, long receivedNanos) {}
+
     // 연결마다 컨테이너를 새로 만들면 실험(수백 연결)에서 스레드가 크게 늘어 하나를 같이 쓴다
     private static final StandardWebSocketClient CLIENT = new StandardWebSocketClient();
 
-    private final BlockingQueue<String> frames = new LinkedBlockingQueue<>();
+    private final BlockingQueue<ReceivedFrame> frames = new LinkedBlockingQueue<>();
     private final CompletableFuture<CloseStatus> closed = new CompletableFuture<>();
     private final WebSocketSession session;
 
@@ -26,7 +28,7 @@ public final class WsTestClient implements AutoCloseable {
         session = CLIENT.execute(new TextWebSocketHandler() {
             @Override
             protected void handleTextMessage(WebSocketSession s, TextMessage message) {
-                frames.add(message.getPayload());
+                frames.add(new ReceivedFrame(message.getPayload(), System.nanoTime()));
             }
 
             @Override
@@ -49,14 +51,19 @@ public final class WsTestClient implements AutoCloseable {
     }
 
     public String next() throws InterruptedException {
-        String frame = frames.poll(5, TimeUnit.SECONDS);
+        ReceivedFrame frame = frames.poll(5, TimeUnit.SECONDS);
         if (frame == null) {
             throw new AssertionError("5초 안에 프레임이 오지 않았다");
         }
-        return frame;
+        return frame.payload();
     }
 
     public String poll(Duration wait) throws InterruptedException {
+        ReceivedFrame frame = pollReceived(wait);
+        return frame == null ? null : frame.payload();
+    }
+
+    public ReceivedFrame pollReceived(Duration wait) throws InterruptedException {
         return frames.poll(wait.toMillis(), TimeUnit.MILLISECONDS);
     }
 
@@ -66,6 +73,10 @@ public final class WsTestClient implements AutoCloseable {
 
     public CloseStatus awaitClosed() throws Exception {
         return closed.get(5, TimeUnit.SECONDS);
+    }
+
+    public boolean closedEventSeen() {
+        return closed.isDone();
     }
 
     @Override

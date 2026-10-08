@@ -8,7 +8,7 @@ HTTP 폴링 → WebSocket → 서버 2대 → Redis로 확장하는 채팅 서�
 
 - 기술: Java 21, Spring Boot 4.1.1, Gradle Kotlin DSL(단일 모듈, 패키지 `jissuo.chat`), `JdbcClient`·JPA(설정으로 선택), Flyway, MySQL 8.4.11 / PostgreSQL 18.6 (DB는 측정 후 선택, ADR-003)
 - 쓰지 않는 것: Spring Security, H2(잠금·커밋 동작이 실제 DB와 달라서)
-- 현재 위치: Step 2, 계획 7(WebSocket 서버 1대) 기능 완료·장애 재현(F3~F6) 진행 전. 기본 채팅은 WebSocket이며 `?transport=polling`은 비교용으로 유지한다. 계획 6 UI 개편과 JDBC·JPA 기능 계약 검증 완료. Membership 중복 입장 실패(F34)는 해결했다. W1~W5 부하·기동·힙 비교는 나머지 계획 뒤로 연기했다(ADR-128). 기본 저장소는 JDBC이며 MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106). 결과는 `docs/reports/2026-10-08-jdbc-vs-jpa.md`에 있다.
+- 현재 위치: Step 2, 계획 7(WebSocket 서버 1대) 기능과 F3~F6 장애 재현 완료, 보완 방식 결정 전. 기본 채팅은 WebSocket이며 `?transport=polling`은 비교용으로 유지한다. 계획 6 UI 개편과 JDBC·JPA 기능 계약 검증 완료. Membership 중복 입장 실패(F34)는 해결했다. W1~W5 부하·기동·힙 비교는 나머지 계획 뒤로 연기했다(ADR-128). 기본 저장소는 JDBC이며 MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106). 결과는 `docs/reports/2026-10-08-jdbc-vs-jpa.md`와 `docs/reports/2026-10-08-plan7-websocket-failures.md`에 있다.
 
 ## 명령어
 

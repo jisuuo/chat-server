@@ -1,6 +1,6 @@
 # 계획 7: WebSocket 서버 1대 구현 계획 (Step 2, 고도화 P7)
 
-> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 커밋·푸시 완료. 웨이브 2(작업 3·6), 웨이브 3(작업 4·7), 웨이브 4(작업 13), 웨이브 5(작업 8) 구현·통합 검증 완료. 다음은 웨이브 6(작업 9, F3 세션 저장소 동시성 재현).
+> 실행 상태 (2026-10-08): 웨이브 1~9 완료. F3~F6 실험의 실제 결과와 한계는 [장애 보고서](../../reports/2026-10-08-plan7-websocket-failures.md)에 기록했다. 아래 작업 9~12의 예상 문구와 코드 예시는 계획 당시 기준이며, 서비스 보완은 아직 결정하지 않았다.
 
 > **실행하는 에이전트에게**: 작업은 아래 "실행 순서와 병렬화"의 **웨이브 단위로 사용자 승인을 받고** 시작한다. 같은 웨이브의 작업은 동시에 진행할 수 있다. 웨이브가 끝나면 통합 확인을 하고 결과(테스트 출력 포함)를 보고한 뒤 멈춘다. **커밋하지 않는다** (사용자가 요청할 때만). 단계는 체크박스(`- [ ]`)로 추적한다. 장애 재현 작업(9~12)은 웨이브마다 멈추고 측정값과 예상을 나눠 보고한다.
 
@@ -3123,7 +3123,7 @@ test('?transport=polling이면 기존 폴링으로 대화한다 (Step 6 비교�
 **Interfaces:**
 - Consumes: `WsSessionRegistry`(작업 1), `WsTestClient`, `Concurrently`, `ExperimentResults`
 
-- [ ] **Step 1: 실험 작성**
+- [x] **Step 1: 실험 작성**
 ```java
 package jissuo.chat.experiment.ws;
 
@@ -3258,11 +3258,11 @@ class SessionRegistryExperiment {
 ```
   - 두 번째 실험에서 `lostAfterAdd` 칸은 "연결 뒤 게이지가 기대보다 적은 수", `leftover`는 "모두 닫은 뒤 남은 수"다. 서버 쪽 예외는 `app.json`의 `ERROR` 행 수로 따로 센다.
 
-- [ ] **Step 2: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.SessionRegistryExperiment'`를 3번 반복하고 CSV를 모은다. 예상(측정 전): direct 모드에서 `ConcurrentModificationException`·`ArrayIndexOutOfBoundsException`·`NullPointerException` 일부와 `leftover > 0`, connections 모드는 재현 빈도가 낮을 수 있다.
+- [x] **Step 2: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.SessionRegistryExperiment'`를 3번 반복하고 CSV를 모은다. 예상(측정 전): direct 모드에서 `ConcurrentModificationException`·`ArrayIndexOutOfBoundsException`·`NullPointerException` 일부와 `leftover > 0`, connections 모드는 재현 빈도가 낮을 수 있다.
 
-- [ ] **Step 3: 멈추고 보고** — 측정값과 예상을 나눠 보고한다. 원인 분석은 사용자와 함께 한다.
+- [x] **Step 3: 멈추고 보고** — 측정값과 예상을 나눠 보고한다. 원인 분석은 사용자와 함께 한다.
 
-- [ ] **Step 4: 보완안 안내 (승인 전 적용하지 않는다)** — 아래를 7단계 형식으로 다듬어 제안한다.
+- [x] **Step 4: 보완안 안내 (승인 전 적용하지 않는다)** — 아래를 7단계 형식으로 다듬어 제안한다.
   1. 한 줄 요약: 세션 저장소를 `ConcurrentHashMap<Long, Set<WebSocketSession>>`(+ `ConcurrentHashMap.newKeySet()`)로 바꾸고 붙이기·떼기를 `compute`로 원자적으로 한다.
   2. 문제: 측정한 예외 수·남은 세션 수.
   3. 화면의 변화: 다른 탭이 메시지를 못 받거나(유실), 닫힌 탭이 게이지에 남는 일이 없어진다.
@@ -3309,7 +3309,7 @@ class SessionRegistryExperiment {
 - Consumes: `ChatHttp`, `WsTestClient`, `ExperimentFixtures`, 지표 `chat.delivery.stage{stage=push}`·`chat.delivery.total{transport=rest}`(작업 13)
 - Produces: `StalledWsClient(int port, long userId)` — 핸드셰이크만 하고 프레임을 읽지 않는 클라이언트(작업 11에서도 참고)
 
-- [ ] **Step 1: 읽지 않는 클라이언트**
+- [x] **Step 1: 읽지 않는 클라이언트**
 ```java
 package jissuo.chat.experiment.ws;
 
@@ -3360,7 +3360,7 @@ final class StalledWsClient implements AutoCloseable {
 }
 ```
 
-- [ ] **Step 2: 실험 작성**
+- [x] **Step 2: 실험 작성**
 ```java
 package jissuo.chat.experiment.ws;
 
@@ -3487,9 +3487,9 @@ class SlowConsumerExperiment {
 ```
   - `meters.timer(name, tags)`는 작업 13에서 등록한 타이머를 같은 태그로 찾는다(없으면 새로 만들어 0으로 시작한다).
 
-- [ ] **Step 3: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.SlowConsumerExperiment'`. 예상(측정 전): baseline은 REST p50이 수십 ms 이하. stalled는 몇십~몇백 건 뒤 서버 송신 버퍼가 차서 push가 막히고, 보낸 사람의 REST 응답과 빠른 수신자의 도착이 함께 늦어진다. Tomcat 전송 시간 초과(기본값 확인 필요)로 push 예외가 나면 Spring의 `afterCompletion`에서 기록되고 REST는 저장 성공 201일 것으로 예상한다(F44). 전송 실패가 난 세션 뒤의 수신자는 push를 못 받을 수 있다(F50).
+- [x] **Step 3: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.SlowConsumerExperiment'`. 예상(측정 전): baseline은 REST p50이 수십 ms 이하. stalled는 몇십~몇백 건 뒤 서버 송신 버퍼가 차서 push가 막히고, 보낸 사람의 REST 응답과 빠른 수신자의 도착이 함께 늦어진다. Tomcat 전송 시간 초과(기본값 확인 필요)로 push 예외가 나면 Spring의 `afterCompletion`에서 기록되고 REST는 저장 성공 201일 것으로 예상한다(F44). 전송 실패가 난 세션 뒤의 수신자는 push를 못 받을 수 있다(F50).
 
-- [ ] **Step 4: 멈추고 보고** — CSV 요약, 응답이 늦어지기 시작한 순번, HTTP 상태별 건수, `app.json`의 예외 종류, DB 저장 여부와 빠른 수신자의 누락 여부를 측정값으로 보고한다. 해결 후보(비동기 전달, 세션별 송신 큐·시간 제한 등)는 7단계로 제안만 한다. 비동기를 고르면 이 실험과 같은 지표(`chat.delivery.stage{push}`, `chat.delivery.total`, REST 응답 시간)로 동기와 비교하는 작업을 따로 계획한다.
+- [x] **Step 4: 멈추고 보고** — CSV 요약, 응답이 늦어지기 시작한 순번, HTTP 상태별 건수, `app.json`의 예외 종류, DB 저장 여부와 빠른 수신자의 누락 여부를 측정값으로 보고한다. 해결 후보(비동기 전달, 세션별 송신 큐·시간 제한 등)는 7단계로 제안만 한다. 비동기를 고르면 이 실험과 같은 지표(`chat.delivery.stage{push}`, `chat.delivery.total`, REST 응답 시간)로 동기와 비교하는 작업을 따로 계획한다.
 
 ---
 
@@ -3500,7 +3500,7 @@ class SlowConsumerExperiment {
 **Files:**
 - Create: `backend/src/test/java/jissuo/chat/experiment/ws/{HalfOpenExperiment,SilentDropProxy}.java`
 
-- [ ] **Step 1: 조용히 끊는 TCP 프록시**
+- [x] **Step 1: 조용히 끊는 TCP 프록시**
 ```java
 package jissuo.chat.experiment.ws;
 
@@ -3589,7 +3589,7 @@ final class SilentDropProxy implements AutoCloseable {
 }
 ```
 
-- [ ] **Step 2: 실험 작성**
+- [x] **Step 2: 실험 작성**
 ```java
 package jissuo.chat.experiment.ws;
 
@@ -3671,7 +3671,7 @@ class HalfOpenExperiment {
 ```
   - 측정 시점은 freeze 뒤 0·10·30·60초다.
 
-- [ ] **Step 3: 실행·보고** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.HalfOpenExperiment'`. 예상(측정 전): 60초 동안 `extraSessions`가 1로 남는다(Tomcat의 WebSocket 유휴 시간 제한 기본값이 없다고 알고 있음, 확인 필요). push는 처음 몇 건 성공하다가 버퍼가 차면 막힌다. 측정값과 예상을 나눠 보고하고 멈춘다. 해결 후보(서버 ping·유휴 시간 제한·클라이언트 heartbeat)는 7단계로 제안만 한다.
+- [x] **Step 3: 실행·보고** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.HalfOpenExperiment'`. 예상(측정 전): 60초 동안 `extraSessions`가 1로 남는다(Tomcat의 WebSocket 유휴 시간 제한 기본값이 없다고 알고 있음, 확인 필요). push는 처음 몇 건 성공하다가 버퍼가 차면 막힌다. 측정값과 예상을 나눠 보고하고 멈춘다. 해결 후보(서버 ping·유휴 시간 제한·클라이언트 heartbeat)는 7단계로 제안만 한다.
 
 ---
 
@@ -3682,7 +3682,7 @@ class HalfOpenExperiment {
 **Files:**
 - Create: `backend/src/test/java/jissuo/chat/experiment/ws/ReconnectLossExperiment.java`
 
-- [ ] **Step 1: 실험 작성**
+- [x] **Step 1: 실험 작성**
 ```java
 package jissuo.chat.experiment.ws;
 
@@ -3769,11 +3769,11 @@ class ReconnectLossExperiment {
 }
 ```
 
-- [ ] **Step 2: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.ReconnectLossExperiment'`. 예상(측정 전): `missedReceived=false`, `afterReceived=true`, `missedStored=true`(저장은 됐고 REST 조회에는 보인다).
+- [x] **Step 2: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.ReconnectLossExperiment'`. 예상(측정 전): `missedReceived=false`, `afterReceived=true`, `missedStored=true`(저장은 됐고 REST 조회에는 보인다).
 
-- [ ] **Step 3: 브라우저 관찰** — 두 탭(A, B 사용자, 같은 방)에서 B의 개발자 도구 Network를 Offline으로 바꾸거나 백엔드를 재시작하는 동안 A가 보낸다. B가 다시 연결된 뒤 그 메시지가 보이지 않고, 새로고침하면 보인다는 것을 확인한다. 최초 조회와 구독 사이 틈(F49)도 같은 방식으로 관찰할 수 있으면 함께 적는다. 결과는 "측정"으로 일지에 적는다.
+- [x] **Step 3: 브라우저 관찰** — 두 탭(A, B 사용자, 같은 방)에서 B의 개발자 도구 Network를 Offline으로 바꾸거나 백엔드를 재시작하는 동안 A가 보낸다. B가 다시 연결된 뒤 그 메시지가 보이지 않고, 새로고침하면 보인다는 것을 확인한다. 최초 조회와 구독 사이 틈(F49)도 같은 방식으로 관찰할 수 있으면 함께 적는다. 결과는 "측정"으로 일지에 적는다.
 
-- [ ] **Step 4: 멈추고 보고** — 측정값과 예상을 나눠 보고한다. 해결 후보(재연결 뒤 마지막 id로 `after` 조회해 합치기, 서버 쪽 재전송 등)는 7단계로 제안만 한다.
+- [x] **Step 4: 멈추고 보고** — 측정값과 예상을 나눠 보고한다. 해결 후보(재연결 뒤 마지막 id로 `after` 조회해 합치기, 서버 쪽 재전송 등)는 7단계로 제안만 한다.
 
 ---
 

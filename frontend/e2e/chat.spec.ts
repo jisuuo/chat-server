@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import type { Browser, Page } from '@playwright/test'
+import type { APIResponse, Browser, Page, WebSocketRoute } from '@playwright/test'
 
 // 기본 폴링 주기 2초(ADR-083)보다 넉넉하게 기다린다
 const POLL_TIMEOUT = 10_000
@@ -121,6 +121,106 @@ test('?transport=polling이면 기존 폴링으로 대화한다 (Step 6 비교�
   expect(seen.sentFrames).toEqual([])
   await b.getByText('폴링 상태').click()
   await expect(b.locator('.panel')).toContainText('after 커서')
+})
+
+test('F6: 연결이 끊긴 동안 저장된 메시지는 재연결만으로 보이지 않고 새로고침 뒤 보인다', async ({ browser }) => {
+  const suffix = Date.now().toString(36)
+  const { page: a } = await newUser(browser, `reconnect-a-${suffix}`)
+  await a.getByLabel('방 이름').fill(`reconnect-${suffix}`)
+  await a.getByRole('button', { name: '방 만들기' }).click()
+  await expect(a).toHaveURL(/#\/rooms\/\d+$/)
+  const roomHash = new URL(a.url()).hash
+  const roomId = Number(roomHash.split('/').at(-1))
+  const senderId = await a.evaluate(() => Number(sessionStorage.getItem('chat.userId')))
+
+  const b = await (await browser.newContext()).newPage()
+  let blocked = false
+  let connectedRoute: WebSocketRoute | undefined
+  await b.routeWebSocket(/\/ws\?userId=/, (ws) => {
+    if (blocked) {
+      void ws.close({ code: 1001 })
+      return
+    }
+    ws.connectToServer()
+    connectedRoute = ws
+  })
+  await b.goto('/')
+  await b.getByLabel('닉네임').fill(`reconnect-b-${suffix}`)
+  await b.getByRole('button', { name: '새 사용자로 시작' }).click()
+  await enter(b, roomHash)
+  await expect(b.locator('.panel')).toContainText('연결됨')
+  expect(connectedRoute).toBeDefined()
+
+  blocked = true
+  await connectedRoute!.close({ code: 1001 })
+  await expect(b.locator('.panel')).toContainText('끊김')
+  const missed = `끊긴 동안-${suffix}`
+  const response = await a.request.post(`/api/rooms/${roomId}/messages`, {
+    headers: { 'X-User-Id': String(senderId) }, data: { content: missed },
+  })
+  expect(response.status()).toBe(201)
+  blocked = false
+  await expect(b.locator('.panel')).toContainText('연결됨', { timeout: POLL_TIMEOUT })
+  await expect(b.getByRole('list', { name: '대화' })).not.toContainText(missed)
+
+  const after = `재연결 뒤-${suffix}`
+  await send(a, after)
+  await expect(b.getByRole('list', { name: '대화' })).toContainText(after, { timeout: PUSH_TIMEOUT })
+  await expect(b.getByRole('list', { name: '대화' })).not.toContainText(missed)
+  await b.reload()
+  await expect(b.getByRole('list', { name: '대화' })).toContainText(missed)
+})
+
+test('F49: 최초 조회 응답과 소켓 구독 사이에 온 메시지는 화면에서 빠진다', async ({ browser }) => {
+  const suffix = Date.now().toString(36)
+  const roomName = `first-load-${suffix}`
+  const missed = `조회 틈-${suffix}`
+  const { page: a } = await newUser(browser, `gap-a-${suffix}`)
+  await a.getByLabel('방 이름').fill(roomName)
+  await a.getByRole('button', { name: '방 만들기' }).click()
+  await expect(a).toHaveURL(/#\/rooms\/\d+$/)
+  const roomHash = new URL(a.url()).hash
+  const roomId = Number(roomHash.split('/').at(-1))
+  const senderId = await a.evaluate(() => Number(sessionStorage.getItem('chat.userId')))
+  const { page: b, seen: bSeen } = await newUser(browser, `gap-b-${suffix}`)
+  await enter(b, roomHash)
+  await b.getByText('연결 상태').click()
+  await expect(b.locator('.panel')).toContainText('연결됨')
+  const receivedCount = b.locator('.panel dt', { hasText: '받은 프레임' }).locator('xpath=following-sibling::dd[1]')
+  const receivedBefore = Number(await receivedCount.textContent())
+
+  // App 소켓은 유지하고 방 화면만 내려, 다음 최신 조회와 구독 사이를 통제한다.
+  await b.evaluate(() => { window.location.hash = '#/rooms' })
+  await expect(b.getByText('방을 고르거나 새로 만드세요.')).toBeVisible()
+  let interceptions = 0
+  let snapshotPromise: Promise<APIResponse> | undefined
+  let injection: Promise<void> | undefined
+  await b.route((url) => url.pathname === `/api/rooms/${roomId}/messages` && url.search === '', async (route) => {
+    interceptions++
+    // StrictMode가 최초 조회를 두 번 시작해도 두 응답 모두 전송 전 스냅샷으로 고정한다.
+    const snapshot = await (snapshotPromise ??= route.fetch())
+    await (injection ??= a.request.post(`/api/rooms/${roomId}/messages`, {
+      headers: { 'X-User-Id': String(senderId) }, data: { content: missed },
+    }).then(async (response) => {
+      expect(response.status()).toBe(201)
+      const messageId = (await response.json()).data.id as number
+      await expect.poll(() => bSeen.frames.some((frame) => {
+        const received = JSON.parse(frame)
+        return received.type === 'message' && received.message.id === messageId
+      })).toBe(true)
+    }))
+    await route.fulfill({ response: snapshot })
+  })
+  await b.evaluate((hash) => { window.location.hash = hash }, roomHash)
+  await expect(b.getByLabel('메시지')).toBeVisible()
+  expect(interceptions).toBeGreaterThan(0)
+  // Playwright의 네트워크 프레임 관찰과 별도로 앱의 onmessage 처리까지 확인한다.
+  await expect.poll(async () => Number(await receivedCount.textContent())).toBeGreaterThan(receivedBefore)
+  await b.waitForTimeout(250)
+  await expect(b.getByRole('list', { name: '대화' })).not.toContainText(missed)
+  await b.unrouteAll({ behavior: 'wait' })
+  await b.reload()
+  await expect(b.getByRole('list', { name: '대화' })).toContainText(missed)
 })
 
 test('비멤버가 방 링크를 열면 입장 버튼이 보이고 메시지는 보이지 않는다', async ({ browser }) => {
