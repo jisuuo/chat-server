@@ -1,5 +1,6 @@
 package jissuo.chat.message.infra.jdbc;
 
+import jissuo.chat.message.infra.MessageRepositoryContract;
 import jissuo.chat.support.MySqlContainerSupport;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -8,9 +9,9 @@ import org.springframework.test.context.DynamicPropertySource;
 
 @SpringBootTest(properties = "chat.message-schema=A")
 @ActiveProfiles("mysql")
-class MySqlAMessageRepositoryTest extends JdbcMessageRepositoryContract {
+class MySqlAMessageRepositoryTest extends MessageRepositoryContract {
 
-    @Override String tableName() { return "messages"; }
+    @Override protected String tableName() { return "messages"; }
 
     @DynamicPropertySource
     static void mysql(DynamicPropertyRegistry registry) {

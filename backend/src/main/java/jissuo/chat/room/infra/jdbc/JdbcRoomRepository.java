@@ -13,9 +13,11 @@ import jissuo.chat.room.domain.RoomName;
 import jissuo.chat.room.domain.RoomRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@ConditionalOnProperty(prefix = "chat", name = "repository", havingValue = "jdbc", matchIfMissing = true)
 public class JdbcRoomRepository implements RoomRepository {
 
     private static final String COLUMNS = "SELECT id, name, created_by, last_message_id, created_at FROM rooms ";

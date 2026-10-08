@@ -51,7 +51,7 @@ describe('apiFetch', () => {
 })
 
 describe('errorMessage', () => {
-  it('ApiError는 서버 문구만, 연결 실패는 안내 문구 (계획 6 세부 #12)', () => {
+  it('ApiError는 서버 문구만, 연결 실패는 안내 문구 (ADR-118)', () => {
     const info = { status: 409, requestId: null, durationMs: 1 }
     expect(errorMessage(new ApiError(409, 'ALREADY_MEMBER', '이미 멤버입니다.', info))).toBe('이미 멤버입니다.')
     expect(errorMessage(new ApiError(502, 'UNKNOWN', 'HTTP 502', { ...info, status: 502 }))).toBe(CONNECTION_ERROR)

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class UserController {
 
-    // 계획 6 세부 #13: 화면이 한 번에 보이는 사람 수보다 넉넉하고, IN 목록이 무한히 커지지 않게 한다
+    // ADR-119: 화면이 한 번에 보이는 사람 수보다 넉넉하고, IN 목록이 무한히 커지지 않게 한다
     static final int MAX_IDS = 100;
 
     private final UserService users;

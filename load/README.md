@@ -1,5 +1,24 @@
 # 계획 5b 부하 실험
 
+## 계획 6 JDBC·JPA 성능 비교 (연기)
+
+2026-10-08 사용자 요청에 따라 나머지 계획이 끝난 뒤 실행한다(ADR-128). 불완전한 `plan6-mysql-a-500k-jdbc` W2 결과는 공식 비교에서 제외한다. 기존 계획 5b JAR(`chat-bench.jar`)은 보존한다.
+
+재개할 때 같은 코드로 빌드한 JAR을 `load/artifacts/chat-bench-plan6.jar`에 복사한다. `BENCH_JAR`는 앱에 마운트할 JAR만 고르고 `BENCH_REPOSITORY`는 구현체만 고른다. 아래 두 조건은 각각 새로 적재한 50만 건 MySQL 스키마 A에서 동일한 15초 워밍업·30초 3회 W1~W5를 실행한다. `prepare.py --fresh`는 **격리된 `chat-bench` 볼륨만** 초기화한다.
+
+```bash
+cd backend && ./gradlew bootJar && cd ..
+cp backend/build/libs/chat-0.0.1-SNAPSHOT.jar load/artifacts/chat-bench-plan6.jar
+BENCH_JAR=chat-bench-plan6.jar BENCH_REPOSITORY=jdbc python3 load/prepare.py --db mysql --schema A --size 500000 --fresh
+BENCH_JAR=chat-bench-plan6.jar BENCH_REPOSITORY=jdbc python3 load/run_matrix.py --db mysql --schema A --size 500000 --suite baseline --duration 30s --warmup 15s --repeats 3 --run-id plan6-jdbc-final
+BENCH_JAR=chat-bench-plan6.jar BENCH_REPOSITORY=jpa python3 load/prepare.py --db mysql --schema A --size 500000 --fresh
+BENCH_JAR=chat-bench-plan6.jar BENCH_REPOSITORY=jpa python3 load/run_matrix.py --db mysql --schema A --size 500000 --suite baseline --duration 30s --warmup 15s --repeats 3 --run-id plan6-jpa-final
+```
+
+두 실행의 데이터 증가량, 실행 순서, 오류율과 반복 범위를 함께 보고한다. 실행 전에는 `plan6-jdbc-final`·`plan6-jpa-final` 결과 디렉터리가 없는지 확인해 기존 원시 결과를 덮지 않는다.
+
+## 계획 5b 기준선
+
 격리된 `chat-bench` Docker Compose 프로젝트에서만 데이터를 적재한다. `chat-db` 볼륨은 건드리지 않는다. 실행 환경·판정 규칙은 [계획 5b](../docs/superpowers/plans/2026-10-07-plan5b-load-db-comparison.md)와 ADR-101~104를 따른다.
 
 ```bash

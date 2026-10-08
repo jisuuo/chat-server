@@ -1,21 +1,22 @@
-package jissuo.chat.user.infra.jdbc;
+package jissuo.chat.user.infra;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import jissuo.chat.user.domain.Nickname;
+import jissuo.chat.user.domain.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * 두 DB에서 같은 결과를 내는지 보기 위해 DB별 하위 클래스가 이 테스트를 그대로 물려받는다.
+ * ADR-025: JDBC와 JPA 구현체가 같은 계약을 지키는지 보려고 인터페이스로 주입한다.
  */
-abstract class JdbcUserRepositoryContract {
+public abstract class UserRepositoryContract {
 
     @Autowired
-    JdbcUserRepository repository;
+    UserRepository repository;
 
     @Autowired
     JdbcClient jdbc;

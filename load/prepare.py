@@ -54,8 +54,9 @@ def main():
     })
     compose_base = ["docker", "compose", "-f", str(COMPOSE)]
     compose = compose_base + ["--profile", args.db]
-    if not (ROOT / "load" / "artifacts" / "chat-bench.jar").is_file():
-        raise RuntimeError("frozen bench jar missing: load/artifacts/chat-bench.jar")
+    bench_jar = env.get("BENCH_JAR", "chat-bench.jar")
+    if Path(bench_jar).name != bench_jar or not (ROOT / "load" / "artifacts" / bench_jar).is_file():
+        raise RuntimeError(f"frozen bench jar missing: load/artifacts/{bench_jar}")
     command(compose_base + ["--profile", "mysql", "--profile", "postgres",
                             "down", "-v", "--remove-orphans"], env=env)
     command(compose + ["up", "-d", "--wait", args.db], env=env)

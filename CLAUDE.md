@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 HTTP 폴링 → WebSocket → 서버 2대 → Redis로 확장하는 채팅 서버 학습 프로젝트다. 기능 완성보다 **결정 → 구현 → 장애 재현 → 원인 분석 → 해결 → 기록** 과정이 목적이다. 모든 문서와 대화는 한국어로 쓴다.
 
-- 기술: Java 21, Spring Boot 4.1.1, Gradle Kotlin DSL(단일 모듈, 패키지 `jissuo.chat`), `JdbcClient`, Flyway, MySQL 8.4.11 / PostgreSQL 18.6 (DB는 측정 후 선택, ADR-003)
-- 쓰지 않는 것: JPA(Step 1 실험 이후), Spring Security, H2(잠금·커밋 동작이 실제 DB와 달라서)
-- 현재 위치: Step 1(단일 서버 + REST + 폴링). 계획 5a·5b 완료. 정합성 실험은 `docs/reports/2026-10-07-plan5a-consistency.md`, 부하·DB 비교는 `docs/reports/2026-10-07-plan5b-load-db-comparison.md`에 있다. MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106).
+- 기술: Java 21, Spring Boot 4.1.1, Gradle Kotlin DSL(단일 모듈, 패키지 `jissuo.chat`), `JdbcClient`·JPA(설정으로 선택), Flyway, MySQL 8.4.11 / PostgreSQL 18.6 (DB는 측정 후 선택, ADR-003)
+- 쓰지 않는 것: Spring Security, H2(잠금·커밋 동작이 실제 DB와 달라서)
+- 현재 위치: Step 1(단일 서버 + REST + 폴링). 계획 6 UI 개편과 JDBC·JPA 기능 계약 검증 완료. Membership 중복 입장 실패(F34)는 해결했다. W1~W5 부하·기동·힙 비교는 나머지 계획 뒤로 연기했다(ADR-128). 기본 저장소는 JDBC이며 MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106). 결과는 `docs/reports/2026-10-08-jdbc-vs-jpa.md`에 있다.
 
 ## 명령어
 
@@ -39,12 +39,12 @@ docker compose -f infra/compose.monitoring.yml --profile logs up -d --wait     #
 
 근거 문서: `docs/superpowers/specs/2026-10-06-chat-server-step1-design.md`(무엇을 만드는가), `docs/design/domain.md`(용어, 규칙 R1~R7, 의존 방향), `docs/design/architecture.md`(인증, API, 응답, 관측), `docs/adr/YYYY-MM-DD.md`(결정 이유, 날짜별).
 
-- **패키지**: 기능별(`room`, `message`, `user`) × 4계층(`domain`, `application`, `infra/jdbc`, `api`) + 기술 관심사(`auth`, `audit`, `common`).
+- **패키지**: 기능별(`room`, `message`, `user`) × 4계층(`domain`, `application`, `infra/jdbc|jpa`, `api`) + 기술 관심사(`auth`, `audit`, `common`).
 - **의존 방향** (ArchUnit으로 검사): `api → application → domain ← infra`. `domain`은 Spring도 모른다. 기능 사이에는 `message → room.domain`만 허용한다(`RoomService` 호출 금지). `room`·`message`는 `user`를 모르고 `userId` 값과 DB FK로만 연결한다.
 - **애그리거트**: `Room`, `Membership`(둘 다 `room` 패키지), `Message`. 서로 id로만 참조한다.
 - **인증**: `AuthFilter`가 `X-User-Id`를 `Authenticator`에 넘기고, 형식만 검사한다(DB 조회 없음). 컨트롤러는 `@CurrentUser AuthUser`로 받는다(ThreadLocal 쓰지 않음). `/api/dev/**`는 인증에서 제외한다. 멤버인지 판단(인가)은 서비스가 `room_members` 행으로 한다.
 - **응답**: 모두 `ApiResponse`이고 `ok()`/`fail()`로만 만든다. HTTP 상태 코드는 실제 결과대로 준다. 예외 변환은 `@RestControllerAdvice` 한 곳에서 한다.
-- **설정으로 구현 선택**: `chat.repository=jdbc`, `chat.message-schema=A|B`(messages PK 비교: `id` 단독 / `(room_id, id)`), `chat.join-boundary=id|time`(재입장 경계: `joined_message_id` / `joined_at`). 통합 테스트는 두 DB × 스키마 A/B에서 같은 결과를 보장해야 한다.
+- **설정으로 구현 선택**: `chat.repository=jdbc|jpa`(기본 `jdbc`; JPA는 메시지 스키마 A만), `chat.message-schema=A|B`(messages PK 비교: `id` 단독 / `(room_id, id)`), `chat.join-boundary=id|time`(재입장 경계: `joined_message_id` / `joined_at`). JDBC 통합 테스트는 두 DB × 스키마 A/B, JPA는 두 DB × 스키마 A에서 같은 계약을 보장한다.
 - **Flyway**: DB별 스크립트가 따로 있다. `backend/src/main/resources/db/migration/{mysql,postgresql}`
 - **메시지 조회**: 커서 방식(`after`=폴링, `before`=위로 스크롤, 둘 다 없으면 최신). 응답은 항상 오래된 것 → 최신 순이고 `hasMore`를 포함한다. 방 목록은 `rooms.last_message_id`(비정규화 컬럼)로 정렬하고, 전송 트랜잭션 안에서 조건부 UPDATE로 갱신한다.
 - **관측**: 최상위 필터가 요청 ID를 생성해 MDC·응답 헤더에 넣고 접근 로그를 남긴다. 메트릭은 `/actuator/prometheus`, 로그는 `backend/logs/app.json`·`audit.json`에 쌓인다.

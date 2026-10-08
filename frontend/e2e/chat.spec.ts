@@ -86,3 +86,59 @@ test('375px에서는 목록과 대화를 한 화면씩 보이고 다크 테마�
   await expect(a.locator('.sidebar')).toBeVisible()
   await expect(a.locator('.main')).toBeHidden()
 })
+
+test('과거 조회와 상대 메시지가 읽던 위치를 지키고 여러 줄을 전송한다', async ({ browser }) => {
+  const suffix = Date.now().toString(36)
+  const a = await newUser(browser, `scroll-a-${suffix}`)
+  const b = await newUser(browser, `scroll-b-${suffix}`)
+  await a.getByLabel('방 이름').fill(`scroll-${suffix}`)
+  await a.getByRole('button', { name: '방 만들기' }).click()
+  await expect(a).toHaveURL(/#\/rooms\/\d+$/)
+  const roomHash = new URL(a.url()).hash
+  const roomId = Number(roomHash.split('/').at(-1))
+  const userId = await a.evaluate(() => Number(sessionStorage.getItem('chat.userId')))
+  await enter(b, roomHash)
+
+  for (let n = 1; n <= 55; n++) {
+    const response = await a.request.post(`/api/rooms/${roomId}/messages`, {
+      headers: { 'X-User-Id': String(userId) },
+      data: { content: `seed-${String(n).padStart(2, '0')}` },
+    })
+    expect(response.ok()).toBeTruthy()
+  }
+  await a.reload()
+  const list = a.getByRole('list', { name: '대화' })
+  await expect(a.getByRole('button', { name: `scroll-${suffix}` })).toHaveAttribute('aria-current', 'page')
+  await expect(a.getByRole('button', { name: '이전 메시지 더 보기' })).toBeVisible()
+  await expect(a.locator('.msg.mine')).toHaveCount(50)
+  await expect(a.locator('.msg time')).toHaveCount(50)
+  await expect(a.locator('.day')).toHaveCount(1)
+  await list.evaluate((element) => { element.scrollTop = 0 })
+  const anchor = a.getByText('seed-06', { exact: true })
+  const before = await anchor.evaluate((element) => element.getBoundingClientRect().top)
+  await a.getByRole('button', { name: '이전 메시지 더 보기' }).click()
+  await expect(a.getByText('seed-01', { exact: true })).toBeVisible()
+  const after = await anchor.evaluate((element) => element.getBoundingClientRect().top)
+  expect(Math.abs(after - before)).toBeLessThan(3)
+
+  await b.reload()
+  await expect(b.getByText('seed-55', { exact: true })).toBeVisible()
+  await expect(b.locator('.msg.mine')).toHaveCount(0)
+  await expect(b.locator('.sender')).toHaveCount(1)
+  await expect(b.locator('.sender')).toHaveText(`scroll-a-${suffix}`)
+  await b.getByRole('list', { name: '대화' }).evaluate((element) => { element.scrollTop = 0 })
+  await send(a, '상대의 새 메시지')
+  await expect(b.getByRole('button', { name: '새 메시지 1개' })).toBeVisible({ timeout: POLL_TIMEOUT })
+  await b.getByRole('button', { name: '새 메시지 1개' }).click()
+  await expect(b.getByRole('button', { name: '새 메시지 1개' })).toHaveCount(0)
+
+  await a.getByLabel('메시지').fill('첫 줄')
+  await a.getByLabel('메시지').press('Shift+Enter')
+  await a.getByLabel('메시지').type('둘째 줄')
+  await a.getByLabel('메시지').press('Enter')
+  await expect(a.getByRole('list', { name: '대화' })).toContainText('첫 줄\n둘째 줄')
+  await a.getByText('폴링 상태').click()
+  await expect(a.locator('.panel')).toBeVisible()
+  await expect(a.locator('.panel')).toContainText('after 커서')
+  await expect(a.locator('.panel')).toContainText('X-Request-Id')
+})

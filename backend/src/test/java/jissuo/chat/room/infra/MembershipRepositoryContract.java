@@ -1,4 +1,4 @@
-package jissuo.chat.room.infra.jdbc;
+package jissuo.chat.room.infra;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -11,6 +11,8 @@ import jissuo.chat.common.ErrorCode;
 import jissuo.chat.room.domain.JoinBoundary;
 import jissuo.chat.room.domain.Membership;
 import jissuo.chat.room.domain.RoomName;
+import jissuo.chat.room.domain.MembershipRepository;
+import jissuo.chat.room.domain.RoomRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,17 +20,17 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 /**
- * 두 DB에서 같은 결과를 내는지 보기 위해 DB별 하위 클래스가 이 테스트를 그대로 물려받는다.
+ * ADR-025: JDBC와 JPA 구현체가 같은 계약을 지키는지 보려고 인터페이스로 주입한다.
  */
-abstract class JdbcMembershipRepositoryContract {
+public abstract class MembershipRepositoryContract {
 
     static final Instant AT = Instant.parse("2026-10-07T01:02:03.123456Z");
 
     @Autowired
-    JdbcMembershipRepository repository;
+    MembershipRepository repository;
 
     @Autowired
-    JdbcRoomRepository rooms;
+    RoomRepository rooms;
 
     @Autowired
     JdbcClient jdbc;

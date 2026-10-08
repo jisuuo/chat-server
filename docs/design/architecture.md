@@ -113,7 +113,7 @@ HTTP 요청 → RequestLogContextFilter (서버 UUID, IP, MDC, 응답 헤더)
 - bench: 부하 실험할 때 켜는 active profile. 운영처럼 로그를 줄여 측정 왜곡을 막고, 실험용 DB에 연결하고, 메트릭은 켠다.
 - 레벨은 패키지마다 따로 적용된다. 우리 코드가 TRACE여도 외부 라이브러리의 DEBUG는 root(INFO)를 따라 보이지 않는다. 필요한 것만 골라 연다.
 - `/actuator/loggers`로 재시작 없이 실행 중 레벨을 바꿀 수 있다 (local, bench만 공개).
-- SQL 로그 패키지: `org.springframework.jdbc.core` (DEBUG: SQL, TRACE: 바인딩 값). JPA 전환 시 Hibernate 로그로 바뀐다 (ADR-024).
+- SQL 로그 패키지: JDBC는 `org.springframework.jdbc.core` (DEBUG: SQL, TRACE: 바인딩 값), JPA는 `org.hibernate.SQL` (DEBUG: SQL). JPA 전환 비교는 F21에서 측정한다 (ADR-024).
 
 ### 감사 로그 (ADR-023)
 - 대상: 방 생성, 입장, 나가기, 인증/인가 실패. **메시지 전송은 제외** (본문은 개인정보, 양도 많음).

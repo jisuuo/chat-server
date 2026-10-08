@@ -1,6 +1,12 @@
 spring:
   application:
     name: chat
+  jpa:
+    # ADR-126: 요청이 끝날 때까지 연결을 잡지 않게 해서 JDBC와 같은 조건에서 비교한다.
+    open-in-view: false
+    hibernate:
+      # ADR-125: Flyway가 스키마 원본이며 매핑 차이를 기동 시 확인한다.
+      ddl-auto: validate
 server:
   forward-headers-strategy: native
   tomcat:

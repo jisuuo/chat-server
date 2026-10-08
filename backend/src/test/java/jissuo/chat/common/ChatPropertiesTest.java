@@ -34,6 +34,13 @@ class ChatPropertiesTest {
                 });
     }
 
+    @Test
+    void jpa를_고를_수_있다() {
+        runner.withPropertyValues("chat.repository=jpa")
+                .run(context -> assertThat(context.getBean(ChatProperties.class).repository())
+                        .isEqualTo(ChatProperties.Repository.JPA));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"chat.repository=jdcb", "chat.message-schema=C", "chat.join-boundary=times"})
     void 없는_값이면_기동에_실패한다(String property) {

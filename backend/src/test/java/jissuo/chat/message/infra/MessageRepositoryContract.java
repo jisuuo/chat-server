@@ -1,9 +1,11 @@
-package jissuo.chat.message.infra.jdbc;
+package jissuo.chat.message.infra;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
 import java.util.List;
+import jissuo.chat.message.infra.jdbc.JdbcMessageRepository;
+import jissuo.chat.message.infra.jdbc.JoinBoundaryMode;
 import jissuo.chat.message.domain.Message;
 import jissuo.chat.message.domain.MessageContent;
 import jissuo.chat.message.domain.MessageCursor;
@@ -14,14 +16,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
-abstract class JdbcMessageRepositoryContract {
+/** ADR-025: JDBC와 JPA가 같은 조회·저장 계약을 지키는지 확인한다. */
+public abstract class MessageRepositoryContract {
 
     static final Instant AT = Instant.parse("2026-10-07T01:02:03.123456Z");
 
     @Autowired MessageRepository repository;
     @Autowired JdbcClient jdbc;
 
-    abstract String tableName();
+    protected abstract String tableName();
+
+    protected MessageRepository timeRepository() {
+        return new JdbcMessageRepository(jdbc, tableName(), JoinBoundaryMode.TIME);
+    }
 
     @BeforeEach
     void clear() {
@@ -87,7 +94,7 @@ abstract class JdbcMessageRepositoryContract {
 
     @Test
     void time_경계는_같은_시각까지_제외하고_번호_경계와_독립적이다() {
-        MessageRepository timeRepository = new JdbcMessageRepository(jdbc, tableName(), JoinBoundaryMode.TIME);
+        MessageRepository timeRepository = timeRepository();
         Message first = timeRepository.save(11, 21, new MessageContent("이전"), AT.minusSeconds(1));
         timeRepository.save(11, 21, new MessageContent("동시"), AT);
         Message later = timeRepository.save(11, 21, new MessageContent("이후"), AT.plusSeconds(1));

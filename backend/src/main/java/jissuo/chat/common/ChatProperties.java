@@ -13,7 +13,7 @@ public record ChatProperties(
         @DefaultValue("id") JoinBoundary joinBoundary
 ) {
 
-    public enum Repository { JDBC }
+    public enum Repository { JDBC, JPA }
 
     /** A: messages PK id 단독, B: messages_b PK (room_id, id) */
     public enum MessageSchema { A, B }

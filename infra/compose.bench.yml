@@ -62,13 +62,14 @@ services:
       SPRING_DATASOURCE_USERNAME: chat
       SPRING_DATASOURCE_PASSWORD: chat
       CHAT_MESSAGE_SCHEMA: "${BENCH_SCHEMA:-A}"
+      CHAT_REPOSITORY: "${BENCH_REPOSITORY:-jdbc}"
       JAVA_TOOL_OPTIONS: "-XX:ActiveProcessorCount=2"
       LOG_DIR: /app/logs
     command: [java, -jar, /app/chat.jar]
     cpus: 2
     mem_limit: 1g
     volumes:
-      - ../load/artifacts/chat-bench.jar:/app/chat.jar:ro
+      - ../load/artifacts/${BENCH_JAR:-chat-bench.jar}:/app/chat.jar:ro
 
 volumes:
   bench-mysql-data:

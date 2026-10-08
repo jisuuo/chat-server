@@ -10,9 +10,11 @@ import jissuo.chat.user.domain.User;
 import jissuo.chat.user.domain.UserRepository;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 @Repository
+@ConditionalOnProperty(prefix = "chat", name = "repository", havingValue = "jdbc", matchIfMissing = true)
 public class JdbcUserRepository implements UserRepository {
 
     private final JdbcClient jdbc;
