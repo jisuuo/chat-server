@@ -35,6 +35,7 @@ class BenchProfileTest {
         assertThat(LocalProfileTest.level(Logger.ROOT_LOGGER_NAME)).isEqualTo(Level.WARN);
         assertThat(LocalProfileTest.level("org.springframework.jdbc.core")).isNull();
         assertThat(LocalProfileTest.level("ACCESS")).isEqualTo(Level.OFF);
+        assertThat(LocalProfileTest.level("WS_ACCESS")).isEqualTo(Level.OFF);
     }
 
     @Test

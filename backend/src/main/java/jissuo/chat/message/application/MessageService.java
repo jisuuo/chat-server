@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.util.List;
 import jissuo.chat.common.ChatException;
 import jissuo.chat.common.ErrorCode;
+import jissuo.chat.common.metrics.DeliveryStage;
 import jissuo.chat.message.domain.DeliveryOrigin;
 import jissuo.chat.message.domain.Message;
 import jissuo.chat.message.domain.MessageContent;
@@ -37,6 +38,7 @@ public class MessageService {
     }
 
     @Transactional
+    @DeliveryStage(value = "save", transport = "internal")
     public Message send(long userId, long roomId, String content) {
         // 실험 코드(experiment/**)가 서비스를 직접 부른다. 전달 시간 지표에서 HTTP·WS와 섞이지 않게 통로를 따로 둔다.
         // 아래 메서드를 같은 객체 안에서 부르므로 트랜잭션은 이 메서드의 프록시가 연다
@@ -44,6 +46,7 @@ public class MessageService {
     }
 
     @Transactional
+    @DeliveryStage("save")
     public Message send(long userId, long roomId, String content, DeliveryOrigin origin) {
         requireMembership(userId, roomId);
         Message saved = messages.save(roomId, userId, new MessageContent(content), clock.instant());

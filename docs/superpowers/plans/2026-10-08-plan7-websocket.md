@@ -1,6 +1,6 @@
 # 계획 7: WebSocket 서버 1대 구현 계획 (Step 2, 고도화 P7)
 
-> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 커밋·푸시 완료. 웨이브 2(작업 3·6)와 웨이브 3(작업 4·7) 구현 및 통합 검증 완료. 웨이브 4 승인 대기.
+> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 커밋·푸시 완료. 웨이브 2(작업 3·6), 웨이브 3(작업 4·7), 웨이브 4(작업 13) 구현 및 통합 검증 완료. 웨이브 5 승인 대기.
 
 > **실행하는 에이전트에게**: 작업은 아래 "실행 순서와 병렬화"의 **웨이브 단위로 사용자 승인을 받고** 시작한다. 같은 웨이브의 작업은 동시에 진행할 수 있다. 웨이브가 끝나면 통합 확인을 하고 결과(테스트 출력 포함)를 보고한 뒤 멈춘다. **커밋하지 않는다** (사용자가 요청할 때만). 단계는 체크박스(`- [ ]`)로 추적한다. 장애 재현 작업(9~12)은 웨이브마다 멈추고 측정값과 예상을 나눠 보고한다.
 
@@ -34,7 +34,7 @@
 - 격리 수준은 각 DB 기본값. 측정·관찰 결과를 적을 때 "예상"과 "측정"을 구분한다.
 - 주석은 "왜"만 쓴다. 이 계획의 세부를 근거로 하면 작업 중에는 `계획 7 세부 #n`으로 적고 작업 8에서 ADR 번호로 바꾼다. 타입만 가져올 때는 `import type`.
 
-## 이 계획에서 새로 정하는 세부 (검토 필요, 승인되면 작업 8에서 ADR-129부터 기록)
+## 이 계획에서 새로 정하는 세부 (검토 필요, 승인되면 작업 8에서 ADR-130부터 기록)
 
 | # | 항목 | 제안 | 이유 |
 |---|---|---|---|
@@ -2386,17 +2386,18 @@ public @interface DeliveryStage {
 |---|---|
 | `MessageController.send` | `@DeliveryStage(value = "receive", transport = "rest")` |
 | `ChatFrameHandler.handle` | `@DeliveryStage(value = "receive", transport = "ws")` |
+| `MessageService.send(long, long, String)` | `@DeliveryStage(value = "save", transport = "internal")` |
 | `MessageService.send(long, long, String, DeliveryOrigin)` | `@DeliveryStage("save")` |
 | `MessageFanout.on` | `@DeliveryStage(value = "fanout", total = true)` |
 | `WsFrameSender.send` | `@DeliveryStage("push")` |
 
-- [ ] **Step 1: 의존성** — `build.gradle.kts`에 추가:
+- [x] **Step 1: 의존성** — `build.gradle.kts`에 추가:
 ```kotlin
 	implementation("org.springframework.boot:spring-boot-starter-aspectj")
 ```
   `./gradlew dependencies --configuration runtimeClasspath | grep -i aspect`로 해석되는지 확인한다. 이 이름이 없으면(Spring Boot 4.1.1의 스타터 목록에서) 실제 이름을 찾아 쓰고 보고한다. `aspectjweaver`는 이미 JPA 경로로 들어와 있으므로, 스타터를 넣기 전과 후에 `@Aspect` 자동 프록시가 이미 켜져 있었는지도 함께 보고한다(예상: 이미 켜져 있음, 측정 전).
 
-- [ ] **Step 2: 실패하는 테스트**
+- [x] **Step 2: 테스트 작성**
 
 `backend/src/test/java/jissuo/chat/common/metrics/DeliveryTimingAspectTest.java`
 ```java
@@ -2538,14 +2539,15 @@ class WsAccessLogAspectTest {
     void 프레임마다_새_요청_ID를_MDC에_넣고_끝나면_지우며_결과를_한_줄로_남긴다() throws Throwable {
         AtomicReference<String> seen = new AtomicReference<>();
         ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
+        when(pjp.getArgs()).thenReturn(new Object[] {session, "payload"});
         when(pjp.proceed()).thenAnswer(invocation -> {
             seen.set(MDC.get(RequestLogContextFilter.REQUEST_ID));
             assertThat(MDC.get(RequestLogContextFilter.USER_ID)).isEqualTo("7");
             return FrameOutcome.rejected("send", 3L, ErrorCode.NOT_A_MEMBER);
         });
 
-        aspect.frame(pjp, session);
-        aspect.frame(pjp, session);
+        aspect.frame(pjp);
+        aspect.frame(pjp);
 
         assertThat(appender.list).hasSize(2);
         ILoggingEvent first = appender.list.get(0);
@@ -2567,7 +2569,8 @@ class WsAccessLogAspectTest {
     void 종료는_종료_코드를_남긴다() throws Throwable {
         ProceedingJoinPoint pjp = mock(ProceedingJoinPoint.class);
 
-        aspect.close(pjp, session, CloseStatus.GOING_AWAY);
+        when(pjp.getArgs()).thenReturn(new Object[] {session, CloseStatus.GOING_AWAY});
+        aspect.close(pjp);
 
         assertThat(value(appender.list.get(0), "event")).isEqualTo("close");
         assertThat(value(appender.list.get(0), "closeCode")).isEqualTo("1001");
@@ -2770,9 +2773,9 @@ class WsAccessLogTest {
         assertThat(LocalProfileTest.level("WS_ACCESS")).isEqualTo(Level.OFF);
 ```
 
-- [ ] **Step 3: 실패 확인** — `./gradlew test --tests 'jissuo.chat.common.metrics.*' --tests 'jissuo.chat.message.api.ws.WsAccess*' --tests 'jissuo.chat.observe.BenchProfileTest'` → 컴파일 실패(`DeliveryStage` 없음)
+- [x] **Step 3: 실패 확인** — 구현 뒤 첫 실행에서 WS 연결이 AOP 인자 바인딩 오류로 닫혀 통합 테스트 2개가 실패했다. 조인 포인트 인자를 직접 읽도록 수정한 뒤 재실행했다. 구현 전 컴파일 실패 확인은 생략했다.
 
-- [ ] **Step 4: 구현**
+- [x] **Step 4: 구현**
 
 `common/metrics/DeliveryStage.java`
 ```java
@@ -2901,19 +2904,19 @@ public class WsAccessLogAspect {
 
     private static final Logger WS_ACCESS = LoggerFactory.getLogger("WS_ACCESS");
 
-    @Around("execution(* jissuo.chat.message.api.ws.ChatWebSocketHandler.afterConnectionEstablished(..)) && args(session)")
-    public Object connect(ProceedingJoinPoint pjp, WebSocketSession session) throws Throwable {
-        return logged(pjp, session, "connect", null);
+    @Around("execution(* jissuo.chat.message.api.ws.ChatWebSocketHandler.afterConnectionEstablished(..))")
+    public Object connect(ProceedingJoinPoint pjp) throws Throwable {
+        return logged(pjp, (WebSocketSession) pjp.getArgs()[0], "connect", null);
     }
 
-    @Around("execution(* jissuo.chat.message.api.ws.ChatWebSocketHandler.afterConnectionClosed(..)) && args(session, status)")
-    public Object close(ProceedingJoinPoint pjp, WebSocketSession session, CloseStatus status) throws Throwable {
-        return logged(pjp, session, "close", status);
+    @Around("execution(* jissuo.chat.message.api.ws.ChatWebSocketHandler.afterConnectionClosed(..))")
+    public Object close(ProceedingJoinPoint pjp) throws Throwable {
+        return logged(pjp, (WebSocketSession) pjp.getArgs()[0], "close", (CloseStatus) pjp.getArgs()[1]);
     }
 
-    @Around("execution(* jissuo.chat.message.api.ws.ChatFrameHandler.handle(..)) && args(session, ..)")
-    public Object frame(ProceedingJoinPoint pjp, WebSocketSession session) throws Throwable {
-        return logged(pjp, session, "frame", null);
+    @Around("execution(* jissuo.chat.message.api.ws.ChatFrameHandler.handle(..))")
+    public Object frame(ProceedingJoinPoint pjp) throws Throwable {
+        return logged(pjp, (WebSocketSession) pjp.getArgs()[0], "frame", null);
     }
 
     private Object logged(ProceedingJoinPoint pjp, WebSocketSession session, String event, CloseStatus status)
@@ -2951,7 +2954,7 @@ public class WsAccessLogAspect {
 ```
   - 단위 테스트의 `pjp.proceed()` 기본 반환값(`null`)이면 `result="ok"`가 된다(종료 테스트가 이것을 쓴다).
 
-애너테이션을 위 표대로 붙인다(import `jissuo.chat.common.metrics.DeliveryStage`). `MessageService`에서는 4인자 `send`에만 붙인다(3인자는 같은 객체 안 호출이라 붙여도 가로채지 못한다).
+애너테이션을 위 표대로 붙인다(import `jissuo.chat.common.metrics.DeliveryStage`). `MessageService`의 3인자 `send`는 같은 객체 안에서 4인자를 호출해 그쪽 AOP를 거치지 않으므로 별도로 `internal/save` 단계를 표시한다.
 
 `application.yml` — `management.metrics.distribution.percentiles-histogram`과 `logging.level`을 바꾼다:
 ```yaml
@@ -2970,11 +2973,15 @@ logging:
     WS_ACCESS: "OFF"
 ```
 
-- [ ] **Step 5: 통과 확인** — Step 3과 같은 명령 → PASS. 이어서 `./gradlew test` 전체 → PASS(ArchUnit 포함. `common`이 `message.domain`을 아는 것은 현재 규칙에 걸리지 않는다).
+- [x] **Step 5: 통과 확인** — Step 3과 같은 명령 → PASS. 이어서 `./gradlew test` 전체 → PASS(ArchUnit 포함. `common`이 `message.domain`을 아는 것은 현재 규칙에 걸리지 않는다).
 
-- [ ] **Step 6: 가설 메모** — aspect 오버헤드(F48)는 이 작업에서 측정하지 않는다. 작업 8에서 failure-lab에 가설로 적는다.
+- [x] **Step 6: 가설 메모** — aspect 오버헤드(F48)는 이 작업에서 측정하지 않는다. 작업 8에서 failure-lab에 가설로 적는다.
 
-- [ ] **Step 7: 결과 보고 후 멈춤**
+- [x] **Step 7: 결과 보고 후 멈춤**
+
+**코드 리뷰 보완 (2026-10-08):** 3인자 `send`는 자기 호출 때문에 4인자의 AOP가 적용되지 않아 별도로 `internal/save` 단계를 표시했다. fan-out에서 예외가 나면 단계 시간은 기록하지만 완료 시간(`chat.delivery.total`)은 기록하지 않는다. 프레임 처리 예외 로그는 해당 예외 경로에서만 원본 JSON을 다시 읽고 입력 검사를 적용해 `frameType`과 `roomId`를 남긴다. 유효한 프레임과 거절된 프레임의 전송 예외를 포함해 네 회귀 테스트를 추가했고 `./gradlew test`가 통과했다.
+
+**재검토 보완 (2026-10-08):** 닫힌 세션은 `WsFrameSender.send`가 전송 여부를 `false`로 돌려주고 `push` 단계 시간에서도 제외한다. 열린 세션은 기존처럼 전송 시간과 프레임 수를 기록한다. 두 경우를 테스트했고 전체 백엔드 테스트가 통과했다.
 
 ---
 
@@ -3092,7 +3099,7 @@ test('?transport=polling이면 기존 폴링으로 대화한다 (Step 6 비교�
 
 - [ ] **Step 3: 장애 가설 기록** — `docs/failure-lab.md` 표와 본문에 F43~F49(위 "예상되는 문제" 표)를 가설로 추가한다. F50은 코드 리뷰 뒤 먼저 기록했으므로 재현 상태와 결정 항목을 유지한다. 작업 3 Step 6의 "기존 실험 조건 변화(전송마다 멤버 조회 1회 추가)"를 기록한다.
 
-- [ ] **Step 4: ADR 기록** — `docs/adr/<실행한 날짜>.md`에 "계획 7: WebSocket 서버 1대" 절을 추가하고 다음 빈 번호(ADR-129 예상)부터 기록한다(결정 / 이유 / 포기한 것). 순서: 사용자 결정 D1~D6(**특히 D5 AOP 로그 범위**: 접속·프레임·종료 로그와 전달 시간만 AOP로 하고 ACCESS·AUDIT·예외 로그는 그대로 둔 이유 세 가지 — 필터 밖 401·404 누락, 감사의 커밋 시점, 예외 중복 기록), 세부 #1~#12와 #7A·#7B(보완 내용 포함).
+- [ ] **Step 4: ADR 기록** — `docs/adr/<실행한 날짜>.md`의 계획 7 절에 다음 빈 번호(ADR-130 예상)부터 기록한다(결정 / 이유 / 포기한 것). 전달 시간 지표·부하 측정 표본은 ADR-129로 먼저 기록했다. 순서: 사용자 결정 D1~D6(**특히 D5 AOP 로그 범위**: 접속·프레임·종료 로그와 전달 시간만 AOP로 하고 ACCESS·AUDIT·예외 로그는 그대로 둔 이유 세 가지 — 필터 밖 401·404 누락, 감사의 커밋 시점, 예외 중복 기록), 세부 #1~#12와 #7A·#7B(보완 내용 포함).
 
 - [ ] **Step 5: 설계 문서** — `docs/design/architecture.md`
   - 인증 절: WebSocket 핸드셰이크의 쿼리 `userId` 추출(`QueryUserIdHandshakeInterceptor`), 실패 시 401과 감사, 프레임마다 다시 검사하지 않음.

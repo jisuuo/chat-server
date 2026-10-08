@@ -4,6 +4,7 @@ logging:
     root: WARN
     jissuo.chat: INFO
     ACCESS: "OFF"
+    WS_ACCESS: "OFF"
 management:
   endpoints:
     web:

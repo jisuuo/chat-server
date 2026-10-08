@@ -4,6 +4,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import jissuo.chat.message.domain.DeliveryOrigin;
+import jissuo.chat.common.metrics.DeliveryStage;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -20,9 +21,10 @@ public class WsFrameSender {
 
     // F4: 받는 쪽이 읽지 않으면 이 호출이 막혀 뒤의 세션과 보낸 사람의 응답이 함께 늦어진다
     // F43: 다른 스레드가 같은 세션에 쓰는 중이면 예외가 난다. 둘 다 재현 전이라 그대로 둔다
-    public void send(WebSocketSession session, TextMessage frame, DeliveryOrigin origin) {
+    @DeliveryStage("push")
+    public boolean send(WebSocketSession session, TextMessage frame, DeliveryOrigin origin) {
         if (!session.isOpen()) {
-            return;
+            return false;
         }
         try {
             session.sendMessage(frame);
@@ -31,5 +33,6 @@ public class WsFrameSender {
             throw new UncheckedIOException(e);
         }
         meters.counter("chat.ws.frames", "type", "message").increment();
+        return true;
     }
 }

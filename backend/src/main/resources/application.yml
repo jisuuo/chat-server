@@ -27,8 +27,11 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
+        # 계획 7 세부 7A: 전달 지연의 분위수를 Prometheus 버킷에서 계산한다.
+        chat.delivery: true
 logging:
   level:
     ACCESS: INFO
+    WS_ACCESS: INFO
   pattern:
     correlation: "[%X{requestId:-}] "

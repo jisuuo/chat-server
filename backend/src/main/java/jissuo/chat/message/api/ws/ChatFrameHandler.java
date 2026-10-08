@@ -6,6 +6,7 @@ import java.io.IOException;
 import jissuo.chat.auth.AuthUser;
 import jissuo.chat.common.ChatException;
 import jissuo.chat.common.ErrorCode;
+import jissuo.chat.common.metrics.DeliveryStage;
 import jissuo.chat.message.api.SendMessageRequest;
 import jissuo.chat.message.application.MessageService;
 import jissuo.chat.message.domain.DeliveryOrigin;
@@ -35,6 +36,7 @@ public class ChatFrameHandler {
         this.meters = meters;
     }
 
+    @DeliveryStage(value = "receive", transport = "ws")
     public FrameOutcome handle(WebSocketSession session, String payload) throws IOException {
         DeliveryOrigin origin = DeliveryOrigin.start("ws");
         AuthUser user = ChatWebSocketHandler.userOf(session);
