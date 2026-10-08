@@ -1,6 +1,6 @@
 # 계획 7: WebSocket 서버 1대 구현 계획 (Step 2, 고도화 P7)
 
-> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 커밋·푸시 완료. 웨이브 2(작업 3·6) 구현 및 통합 검증 완료. 웨이브 3 승인 대기.
+> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 커밋·푸시 완료. 웨이브 2(작업 3·6)와 웨이브 3(작업 4·7) 구현 및 통합 검증 완료. 웨이브 4 승인 대기.
 
 > **실행하는 에이전트에게**: 작업은 아래 "실행 순서와 병렬화"의 **웨이브 단위로 사용자 승인을 받고** 시작한다. 같은 웨이브의 작업은 동시에 진행할 수 있다. 웨이브가 끝나면 통합 확인을 하고 결과(테스트 출력 포함)를 보고한 뒤 멈춘다. **커밋하지 않는다** (사용자가 요청할 때만). 단계는 체크박스(`- [ ]`)로 추적한다. 장애 재현 작업(9~12)은 웨이브마다 멈추고 측정값과 예상을 나눠 보고한다.
 
@@ -1934,7 +1934,7 @@ record ErrorFrame(String type, Long roomId, String code, String message)
 ```
 - 받은 프레임 `type` 값: 올바른 send는 `send`, JSON이 아니거나 모르는 type은 `invalid`(카운터·로그 태그)
 
-- [ ] **Step 1: 실패하는 테스트**
+- [x] **Step 1: 실패하는 테스트**
 
 `backend/src/test/java/jissuo/chat/message/api/ws/ChatFrameHandlerTest.java` (DB 없는 단위 테스트)
 ```java
@@ -2096,9 +2096,9 @@ class ChatFrameHandlerTest {
     }
 ```
 
-- [ ] **Step 2: 실패 확인** — `./gradlew test --tests 'jissuo.chat.message.api.ws.*'` → 컴파일 실패(`ChatFrameHandler` 없음)
+- [x] **Step 2: 실패 확인** — `./gradlew test --tests 'jissuo.chat.message.api.ws.*'` → 컴파일 실패(`ChatFrameHandler` 없음)
 
-- [ ] **Step 3: 구현**
+- [x] **Step 3: 구현**
 
 `message/api/ws/SendFrame.java`, `ErrorFrame.java`, `FrameOutcome.java`
 ```java
@@ -2229,9 +2229,9 @@ public class ChatFrameHandler {
     }
 ```
 
-- [ ] **Step 4: 통과 확인** — `./gradlew test --tests 'jissuo.chat.message.*' --tests 'jissuo.chat.ArchitectureTest'` → PASS
+- [x] **Step 4: 통과 확인** — `./gradlew test --tests 'jissuo.chat.message.*' --tests 'jissuo.chat.ArchitectureTest'` → PASS. 웨이브 3 통합 `./gradlew test`와 프론트 전체 검사도 PASS
 
-- [ ] **Step 5: 결과 보고 후 멈춤**
+- [x] **Step 5: 결과 보고 후 멈춤**
 
 ---
 
@@ -2246,7 +2246,7 @@ public class ChatFrameHandler {
 - Consumes: `ChatSocket.send`, `ServerFrame`의 `error`(작업 5), `CONNECTION_ERROR`(`api/client.ts`)
 - Produces: `RoomMessages.send`의 시그니처는 그대로 `(content: string) => Promise<boolean>`
 
-- [ ] **Step 1: 실패하는 테스트** — `useRoomMessages.test.ts`의 `describe('useRoomMessages (websocket)')`에 추가:
+- [x] **Step 1: 실패하는 테스트** — `useRoomMessages.test.ts`의 `describe('useRoomMessages (websocket)')`에 추가:
 ```ts
   it('send는 소켓으로 보내고 true, REST는 부르지 않으며 내 메시지는 push로만 합친다', async () => {
     const fake = fakeChatSocket()
@@ -2311,9 +2311,9 @@ public class ChatFrameHandler {
   })
 ```
 
-- [ ] **Step 2: 실패 확인** — `npx vitest run src/messages/useRoomMessages.test.ts src/pages/ChatRoomPage.test.tsx` → 새 테스트 FAIL(REST `sendMessage`로 보냄)
+- [x] **Step 2: 실패 확인** — `npx vitest run src/messages/useRoomMessages.test.ts src/pages/ChatRoomPage.test.tsx` → 새 테스트 FAIL(REST `sendMessage`로 보냄)
 
-- [ ] **Step 3: 구현** — `useRoomMessages.ts`
+- [x] **Step 3: 구현** — `useRoomMessages.ts`
   - import 줄을 `import { ApiError, CONNECTION_ERROR, errorMessage } from '../api/client'`로 바꾼다.
   - 작업 6의 구독 effect를 바꾼다:
 ```ts
@@ -2350,9 +2350,9 @@ public class ChatFrameHandler {
     }
 ```
 
-- [ ] **Step 4: 통과 확인** — `npx vitest run && npx tsc -b && npm run lint` → PASS
+- [x] **Step 4: 통과 확인** — `npx vitest run && npx tsc -b && npm run lint` → PASS (21개 파일, 106개 테스트)
 
-- [ ] **Step 5: 결과 보고 후 멈춤**
+- [x] **Step 5: 결과 보고 후 멈춤**
 
 ---
 

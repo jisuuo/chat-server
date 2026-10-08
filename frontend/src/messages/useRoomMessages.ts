@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { joinRoom, leaveRoom, readMessages, sendMessage } from '../api/chat'
-import { ApiError, errorMessage } from '../api/client'
+import { ApiError, CONNECTION_ERROR, errorMessage } from '../api/client'
 import type { Message } from '../api/types'
 import type { SocketStats } from '../realtime/chatSocket'
 import { currentTransport } from '../realtime/transport'
@@ -95,8 +95,17 @@ export function useRoomMessages(userId: number, roomId: number): RoomMessages {
     // 계획 7 세부 9: 다른 방 메시지는 무시한다(방 목록 자동 갱신 없음, ADR-084). 내 메시지도 push로 받는다.
     // 구독 전에 온 push는 받지 않는다(F49, 장애 선행)
     return socket.subscribe((frame) => {
-      if (frame.type !== 'message' || frame.message.roomId !== roomId) return
-      setMessages((current) => mergeMessages(current, [frame.message]))
+      if (frame.type === 'message') {
+        if (frame.message.roomId === roomId) setMessages((current) => mergeMessages(current, [frame.message]))
+        return
+      }
+      if (frame.roomId !== null && frame.roomId !== roomId) return
+      // ADR-084: 멤버 여부는 서버의 인가 결과로 판단한다 (REST 403과 같은 처리)
+      if (frame.code === 'NOT_A_MEMBER') {
+        setStatus('notMember')
+        return
+      }
+      setError(frame.message)
     })
   }, [transport, socket, status, roomId])
 
@@ -113,6 +122,16 @@ export function useRoomMessages(userId: number, roomId: number): RoomMessages {
   }
 
   async function send(content: string) {
+    if (transport === 'websocket') {
+      // 계획 7 세부 3: 응답 짝 맞춤이 없어 성공은 "보냈다"까지만 안다. 결과는 message push나 error 프레임으로 온다.
+      // 전송 중 비활성화·낙관적 표시는 하지 않는다(ADR-034, F33)
+      if (socket?.send(roomId, content)) {
+        setError(null)
+        return true
+      }
+      setError(CONNECTION_ERROR)
+      return false
+    }
     try {
       const { data } = await sendMessage(userId, roomId, content)
       setMessages((current) => mergeMessages(current, [data]))

@@ -221,4 +221,19 @@ describe('ChatRoomPage (websocket)', () => {
     await userEvent.click(screen.getByText('연결 상태'))
     expect(within(screen.getByRole('complementary', { name: '연결 상태' })).getByText('연결됨')).toBeInTheDocument()
   })
+
+  it('보내기는 소켓으로 보내고 입력창을 비우며, 거절 프레임이 오면 입장 버튼으로 바뀐다', async () => {
+    const fake = fakeChatSocket()
+    vi.mocked(chat.readMessages).mockResolvedValue(page([]))
+    render(<ChatSocketContext.Provider value={fake.socket}>
+      <ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />
+    </ChatSocketContext.Provider>)
+    await userEvent.type(await screen.findByLabelText('메시지'), '안녕')
+    await userEvent.click(screen.getByRole('button', { name: '보내기' }))
+    expect(fake.sent).toEqual([{ roomId: 1, content: '안녕' }])
+    expect(screen.getByLabelText('메시지')).toHaveValue('')
+
+    act(() => fake.push({ type: 'error', roomId: 1, code: 'NOT_A_MEMBER', message: '이 채팅방의 멤버가 아닙니다.' }))
+    expect(await screen.findByRole('button', { name: '입장' })).toBeInTheDocument()
+  })
 })

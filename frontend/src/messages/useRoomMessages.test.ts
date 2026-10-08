@@ -3,7 +3,7 @@ import { createElement } from 'react'
 import type { PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as chat from '../api/chat'
-import { ApiError } from '../api/client'
+import { ApiError, CONNECTION_ERROR } from '../api/client'
 import type { Message } from '../api/types'
 import { ChatSocketContext } from '../realtime/useChatSocket'
 import { fakeChatSocket } from '../test/fakeChatSocket'
@@ -106,5 +106,48 @@ describe('useRoomMessages (websocket)', () => {
     await waitFor(() => expect(result.current.status).toBe('notMember'))
     act(() => fake.push({ type: 'message', message: msg(5) }))
     expect(result.current.messages).toEqual([])
+  })
+
+  it('send는 소켓으로 보내고 true, REST는 부르지 않으며 내 메시지는 push로만 합친다', async () => {
+    const fake = fakeChatSocket()
+    vi.mocked(chat.readMessages).mockResolvedValue(page([msg(1)]))
+    const { result } = renderHook(() => useRoomMessages(1, 1), { wrapper: withSocket(fake.socket) })
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+
+    let ok = false
+    await act(async () => { ok = await result.current.send('안녕') })
+    expect(ok).toBe(true)
+    expect(fake.sent).toEqual([{ roomId: 1, content: '안녕' }])
+    expect(chat.sendMessage).not.toHaveBeenCalled()
+    // 계획 7 세부 3: 낙관적 표시 없음(F33). 서버 push가 와야 보인다
+    expect(result.current.messages.map((m) => m.id)).toEqual([1])
+    act(() => fake.push({ type: 'message', message: msg(2, 1) }))
+    expect(result.current.messages.map((m) => m.id)).toEqual([1, 2])
+  })
+
+  it('연결이 열려 있지 않으면 연결 오류 문구를 보이고 false', async () => {
+    const fake = fakeChatSocket()
+    fake.disconnect()
+    vi.mocked(chat.readMessages).mockResolvedValue(page([]))
+    const { result } = renderHook(() => useRoomMessages(1, 1), { wrapper: withSocket(fake.socket) })
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    let ok = true
+    await act(async () => { ok = await result.current.send('안녕') })
+    expect(ok).toBe(false)
+    expect(result.current.error).toBe(CONNECTION_ERROR)
+  })
+
+  it('이 방의 NOT_A_MEMBER 오류 프레임은 notMember, 다른 오류는 서버 문구, 다른 방 오류는 무시', async () => {
+    const fake = fakeChatSocket()
+    vi.mocked(chat.readMessages).mockResolvedValue(page([]))
+    const { result } = renderHook(() => useRoomMessages(1, 1), { wrapper: withSocket(fake.socket) })
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+
+    act(() => fake.push({ type: 'error', roomId: 9, code: 'NOT_A_MEMBER', message: '멤버 아님' }))
+    expect(result.current.status).toBe('ready')
+    act(() => fake.push({ type: 'error', roomId: null, code: 'INVALID_REQUEST', message: '요청 값이 올바르지 않습니다.' }))
+    expect(result.current.error).toBe('요청 값이 올바르지 않습니다.')
+    act(() => fake.push({ type: 'error', roomId: 1, code: 'NOT_A_MEMBER', message: '이 채팅방의 멤버가 아닙니다.' }))
+    expect(result.current.status).toBe('notMember')
   })
 })

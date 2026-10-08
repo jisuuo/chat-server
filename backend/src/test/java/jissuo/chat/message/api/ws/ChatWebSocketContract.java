@@ -102,6 +102,59 @@ abstract class ChatWebSocketContract {
         assertThat(memberTab.poll(Duration.ofMillis(500))).isNull();
     }
 
+    @Test
+    void WS로_보내면_저장되고_같은_방_멤버와_보낸_사람이_push로_받는다() throws Exception {
+        WsTestClient senderTab = connect(sender);
+        WsTestClient memberTab = connect(member);
+
+        senderTab.send("{\"type\":\"send\",\"roomId\":" + room + ",\"content\":\"웹소켓으로\"}");
+
+        JsonNode toMember = json.readTree(memberTab.next());
+        JsonNode toSender = json.readTree(senderTab.next());
+        assertThat(toMember.at("/message/content").asString()).isEqualTo("웹소켓으로");
+        assertThat(toSender.get("message")).isEqualTo(toMember.get("message"));
+        long id = toMember.at("/message/id").asLong();
+        // REST 조회로도 같은 메시지가 보인다 (저장 경로가 같다)
+        JsonNode page = json.readTree(http.get("/api/rooms/" + room + "/messages", member).body());
+        assertThat(page.at("/data/messages/0/id").asLong()).isEqualTo(id);
+    }
+
+    @Test
+    void 비멤버의_WS_전송은_보낸_세션에만_NOT_A_MEMBER이고_연결은_유지된다() throws Exception {
+        WsTestClient strangerTab = connect(stranger);
+        WsTestClient memberTab = connect(member);
+
+        strangerTab.send("{\"type\":\"send\",\"roomId\":" + room + ",\"content\":\"몰래\"}");
+
+        JsonNode error = json.readTree(strangerTab.next());
+        assertThat(error.get("type").asString()).isEqualTo("error");
+        assertThat(error.get("code").asString()).isEqualTo("NOT_A_MEMBER");
+        assertThat(error.get("roomId").asLong()).isEqualTo(room);
+        assertThat(memberTab.poll(Duration.ofMillis(500))).isNull();
+        assertThat(strangerTab.isOpen()).isTrue();
+    }
+
+    @Test
+    void 없는_방으로_보내면_REST와_같이_NOT_A_MEMBER다() throws Exception {
+        // 서비스는 멤버 행으로만 판단하므로(R5) 없는 방도 멤버가 아니다. ROOM_NOT_FOUND는 입장에서만 나온다
+        WsTestClient senderTab = connect(sender);
+
+        senderTab.send("{\"type\":\"send\",\"roomId\":999999,\"content\":\"없는 방\"}");
+
+        assertThat(json.readTree(senderTab.next()).get("code").asString()).isEqualTo("NOT_A_MEMBER");
+    }
+
+    @Test
+    void 잘못된_JSON은_INVALID_REQUEST이고_연결을_유지해_다음_전송이_된다() throws Exception {
+        WsTestClient senderTab = connect(sender);
+
+        senderTab.send("{");
+        assertThat(json.readTree(senderTab.next()).get("code").asString()).isEqualTo("INVALID_REQUEST");
+        senderTab.send("{\"type\":\"send\",\"roomId\":" + room + ",\"content\":\"그다음\"}");
+
+        assertThat(json.readTree(senderTab.next()).at("/message/content").asString()).isEqualTo("그다음");
+    }
+
     WsTestClient connect(long userId) throws Exception {
         int before = (int) sessions();
         WsTestClient client = WsTestClient.connect(port, userId);

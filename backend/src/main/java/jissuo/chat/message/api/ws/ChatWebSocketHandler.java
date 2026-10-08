@@ -7,6 +7,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.TextMessage;
 
 /**
  * ADR-002: 순수 WebSocketHandler. TextWebSocketHandler를 상속하지 않는 이유는 handleMessage가 handleTextMessage를
@@ -16,9 +17,11 @@ import org.springframework.web.socket.WebSocketSession;
 public class ChatWebSocketHandler implements WebSocketHandler {
 
     private final WsSessionRegistry sessions;
+    private final ChatFrameHandler frames;
 
-    public ChatWebSocketHandler(WsSessionRegistry sessions) {
+    public ChatWebSocketHandler(WsSessionRegistry sessions, ChatFrameHandler frames) {
         this.sessions = sessions;
+        this.frames = frames;
     }
 
     @Override
@@ -27,8 +30,11 @@ public class ChatWebSocketHandler implements WebSocketHandler {
     }
 
     @Override
-    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) {
-        // 작업 4에서 받은 프레임을 ChatFrameHandler로 넘긴다
+    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+        // 계획 7 세부 3: 텍스트만 처리한다. 바이너리·pong은 무시한다(ping/pong 없음, F5)
+        if (message instanceof TextMessage text) {
+            frames.handle(session, text.getPayload());
+        }
     }
 
     @Override
