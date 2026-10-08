@@ -80,6 +80,17 @@ describe('ChatRoomPage', () => {
     expect(await screen.findByText('입장 후')).toBeInTheDocument()
   })
 
+  it('첫 조회의 일시 오류를 화면의 다시 시도로 복구한다', async () => {
+    vi.mocked(chat.readMessages)
+      .mockRejectedValueOnce(new Error('temporary'))
+      .mockResolvedValueOnce(page([msg(5, 2, '다시 읽음')]))
+    render(<ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />)
+
+    await userEvent.click(await screen.findByRole('button', { name: '다시 시도' }))
+    expect(await screen.findByText('다시 읽음')).toBeInTheDocument()
+    expect(chat.readMessages).toHaveBeenCalledTimes(2)
+  })
+
   it('입장이 409(이미 멤버)면 그대로 다시 읽는다', async () => {
     vi.mocked(chat.readMessages)
       .mockRejectedValueOnce(new ApiError(403, 'NOT_A_MEMBER', '멤버가 아닙니다.', { ...info, status: 403 }))

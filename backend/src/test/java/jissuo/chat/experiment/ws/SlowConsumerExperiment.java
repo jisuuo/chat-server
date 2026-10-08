@@ -71,6 +71,8 @@ class SlowConsumerExperiment {
                      boolean stopAfterSlow) throws Exception {
         Snapshot push = Snapshot.of(timer("chat.delivery.stage", "stage", "push", "transport", "rest"));
         Snapshot total = Snapshot.of(timer("chat.delivery.total", "transport", "rest"));
+        double droppedBefore = meters.counter("chat.ws.outbound.dropped", "reason", "queue_full").count();
+        double failedBefore = meters.counter("chat.delivery.failed", "transport", "rest").count();
         List<Long> rest = new ArrayList<>();
         long fastMax = 0;
         int non201 = 0;
@@ -108,6 +110,14 @@ class SlowConsumerExperiment {
                 Long.toString(rest.get(rest.size() / 2)), Long.toString(rest.getLast()), Long.toString(fastMax),
                 push.meanSince(), push.max(), total.meanSince(), total.max(), Integer.toString(non201),
                 Integer.toString(fastMissing), Long.toString(messageCount(room) - storedBefore)));
+        ExperimentResults.record("ws-slow-consumer-remediation",
+                "phase,messages,restMaxMs,fastMissing,queueDropped,deliveryFailed",
+                String.join(",", phase, Integer.toString(rest.size()), Long.toString(rest.getLast()),
+                        Integer.toString(fastMissing),
+                        Long.toString(Math.round(meters.counter("chat.ws.outbound.dropped", "reason", "queue_full")
+                                .count() - droppedBefore)),
+                        Long.toString(Math.round(meters.counter("chat.delivery.failed", "transport", "rest")
+                                .count() - failedBefore))));
     }
 
     private long messageCount(long room) {

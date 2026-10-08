@@ -2,7 +2,6 @@ package jissuo.chat.message.api.ws;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.validation.Validator;
-import java.io.IOException;
 import jissuo.chat.auth.AuthUser;
 import jissuo.chat.common.ChatException;
 import jissuo.chat.common.ErrorCode;
@@ -28,16 +27,19 @@ public class ChatFrameHandler {
     private final JsonMapper json;
     private final Validator validator;
     private final MeterRegistry meters;
+    private final WsOutboundQueue outbound;
 
-    public ChatFrameHandler(MessageService messages, JsonMapper json, Validator validator, MeterRegistry meters) {
+    public ChatFrameHandler(MessageService messages, JsonMapper json, Validator validator, MeterRegistry meters,
+                            WsOutboundQueue outbound) {
         this.messages = messages;
         this.json = json;
         this.validator = validator;
         this.meters = meters;
+        this.outbound = outbound;
     }
 
     @DeliveryStage(value = "receive", transport = "ws")
-    public FrameOutcome handle(WebSocketSession session, String payload) throws IOException {
+    public FrameOutcome handle(WebSocketSession session, String payload) {
         DeliveryOrigin origin = DeliveryOrigin.start("ws");
         AuthUser user = ChatWebSocketHandler.userOf(session);
         SendFrame frame;
@@ -67,13 +69,11 @@ public class ChatFrameHandler {
         }
     }
 
-    private FrameOutcome reject(WebSocketSession session, String type, Long roomId, ErrorCode code) throws IOException {
+    private FrameOutcome reject(WebSocketSession session, String type, Long roomId, ErrorCode code) {
         if ("invalid".equals(type)) {
             count("invalid");
         }
-        // 같은 세션에 push와 오류를 동시에 쓰는 경우(F43)는 재현 전까지 그대로 둔다
-        session.sendMessage(new TextMessage(json.writeValueAsString(ErrorFrame.of(roomId, code))));
-        count("error");
+        outbound.error(session, new TextMessage(json.writeValueAsString(ErrorFrame.of(roomId, code))));
         return FrameOutcome.rejected(type, roomId, code);
     }
 

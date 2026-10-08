@@ -2,12 +2,14 @@ package jissuo.chat.message.api.ws;
 
 import jissuo.chat.auth.QueryUserIdHandshakeInterceptor;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 @Configuration(proxyBeanMethods = false)
 @EnableWebSocket
+@EnableScheduling
 public class WebSocketConfig implements WebSocketConfigurer {
 
     private final ChatWebSocketHandler handler;

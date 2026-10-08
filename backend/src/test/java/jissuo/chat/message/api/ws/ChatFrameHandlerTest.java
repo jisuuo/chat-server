@@ -37,8 +37,9 @@ class ChatFrameHandlerTest {
     final MessageService messages = mock(MessageService.class);
     final JsonMapper json = JsonMapper.builder().build();
     final SimpleMeterRegistry meters = new SimpleMeterRegistry();
+    final WsOutboundQueue outbound = mock(WsOutboundQueue.class);
     final ChatFrameHandler handler = new ChatFrameHandler(messages, json,
-            Validation.buildDefaultValidatorFactory().getValidator(), meters);
+            Validation.buildDefaultValidatorFactory().getValidator(), meters, outbound);
     final WebSocketSession session = mock(WebSocketSession.class);
 
     @BeforeEach
@@ -60,7 +61,7 @@ class ChatFrameHandlerTest {
         verify(messages).send(eq(7L), eq(3L), eq("안녕"), origin.capture());
         assertThat(origin.getValue().transport()).isEqualTo("ws");
         // ADR-131: 응답 짝 맞춤 없이 보낸 사람도 message push로 받는다
-        verify(session, never()).sendMessage(any());
+        verify(outbound, never()).message(any(), any(), any(), any());
         assertThat(meters.get("chat.ws.frames").tag("type", "send").counter().count()).isEqualTo(1);
     }
 
@@ -95,7 +96,7 @@ class ChatFrameHandlerTest {
 
     private String sentFrame() throws Exception {
         ArgumentCaptor<TextMessage> frame = ArgumentCaptor.forClass(TextMessage.class);
-        verify(session).sendMessage(frame.capture());
+        verify(outbound).error(eq(session), frame.capture());
         return frame.getValue().getPayload();
     }
 }

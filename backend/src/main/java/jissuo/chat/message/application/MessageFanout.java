@@ -1,5 +1,7 @@
 package jissuo.chat.message.application;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import java.util.List;
 import jissuo.chat.common.metrics.DeliveryStage;
 import jissuo.chat.message.domain.DeliveryOrigin;
 import jissuo.chat.message.domain.Message;
@@ -13,19 +15,26 @@ public class MessageFanout {
 
     private final MembershipRepository memberships;
     private final MessagePusher pusher;
+    private final MeterRegistry meters;
 
-    public MessageFanout(MembershipRepository memberships, MessagePusher pusher) {
+    public MessageFanout(MembershipRepository memberships, MessagePusher pusher, MeterRegistry meters) {
         this.memberships = memberships;
         this.pusher = pusher;
+        this.meters = meters;
     }
 
-    // ADR-132: 커밋 뒤 보내는 스레드에서 동기로 보낸다. 한 명이 느리면 모두가 늦어지는 문제(F4)를
-    // 재현하려고 비동기로 미리 바꾸지 않는다. 예외도 잡지 않는다(F44)
+    // ADR-132: 커밋 뒤 멤버를 조회한다. ADR-143: push는 세션별 송신 큐에서 완료한다.
     @TransactionalEventListener
-    @DeliveryStage(value = "fanout", total = true)
+    @DeliveryStage("fanout")
     public void on(MessageSentEvent event) {
         Message message = event.message();
-        pusher.push(memberships.findUserIds(message.roomId()), message,
-                new DeliveryOrigin(event.transport(), event.startedNanos()));
+        List<Long> userIds;
+        try {
+            userIds = memberships.findUserIds(message.roomId());
+        } catch (RuntimeException e) {
+            meters.counter("chat.delivery.failed", "transport", event.transport()).increment();
+            throw e;
+        }
+        pusher.push(userIds, message, new DeliveryOrigin(event.transport(), event.startedNanos()));
     }
 }

@@ -7,6 +7,7 @@ import jissuo.chat.message.domain.DeliveryOrigin;
 import jissuo.chat.common.metrics.DeliveryStage;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.PingMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 /** 세션 하나에 프레임 하나를 보낸다. push 단계 시간(ADR-135)을 세션마다 재려고 별도 빈으로 둔다. */
@@ -19,20 +20,38 @@ public class WsFrameSender {
         this.meters = meters;
     }
 
-    // F4: 받는 쪽이 읽지 않으면 이 호출이 막혀 뒤의 세션과 보낸 사람의 응답이 함께 늦어진다
-    // F43: 다른 스레드가 같은 세션에 쓰는 중이면 예외가 난다. 둘 다 재현 전이라 그대로 둔다
+    // ADR-143: 이 호출은 해당 세션의 송신 작업자에서만 실행한다.
     @DeliveryStage("push")
     public boolean send(WebSocketSession session, TextMessage frame, DeliveryOrigin origin) {
+        return sendFrame(session, frame, "message");
+    }
+
+    public boolean sendError(WebSocketSession session, TextMessage frame) {
+        return sendFrame(session, frame, "error");
+    }
+
+    public boolean sendPing(WebSocketSession session, PingMessage frame) {
         if (!session.isOpen()) {
             return false;
         }
         try {
             session.sendMessage(frame);
         } catch (IOException e) {
-            // F44: 저장은 이미 커밋됐다. AFTER_COMMIT 리스너의 예외는 Spring이 로그에 남긴다
             throw new UncheckedIOException(e);
         }
-        meters.counter("chat.ws.frames", "type", "message").increment();
+        return true;
+    }
+
+    private boolean sendFrame(WebSocketSession session, TextMessage frame, String type) {
+        if (!session.isOpen()) {
+            return false;
+        }
+        try {
+            session.sendMessage(frame);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        meters.counter("chat.ws.frames", "type", type).increment();
         return true;
     }
 }

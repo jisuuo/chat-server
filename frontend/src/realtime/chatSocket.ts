@@ -65,8 +65,8 @@ export function createChatSocket(userId: number, options: Options = {}): ChatSoc
       current = null
       update({ state: 'closed', lastCloseCode: event.code })
       if (!running) return
-      // ADR-137: 고정 1초 뒤 다시 연결한다. 지수 대기·지터는 F17(Step 3)에서,
-      // 끊긴 동안 온 메시지는 따라잡지 않는다(F6, 장애 선행)
+      // ADR-137: 고정 1초 뒤 다시 연결한다. 지수 대기·지터는 F17(Step 3)에서 다룬다.
+      // 방 화면은 다시 연결된 뒤 REST 조회로 놓친 메시지를 합친다(ADR-145).
       timer = setTimeout(() => {
         update({ reconnects: stats.reconnects + 1 })
         connect()

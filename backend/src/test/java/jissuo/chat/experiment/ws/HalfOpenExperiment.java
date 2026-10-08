@@ -20,7 +20,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import tools.jackson.databind.json.JsonMapper;
 
-/** F5: ping/pong이 없으면 조용히 끊긴 연결을 서버가 알아채지 못해 세션이 남는지 본다. */
+/** F5: 조용히 끊긴 연결의 세션 수가 시간에 따라 어떻게 바뀌는지 본다. */
 @Tag("experiment")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("mysql")
@@ -38,7 +38,7 @@ class HalfOpenExperiment {
 
     @Test
     @Timeout(value = 5, unit = TimeUnit.MINUTES)
-    void 조용히_끊긴_연결은_세션_게이지에서_줄지_않는다() throws Exception {
+    void 조용히_끊긴_연결의_세션_수를_관찰한다() throws Exception {
         var fixtures = new ExperimentFixtures(jdbc);
         ChatHttp http = new ChatHttp(port, json);
         long sender = fixtures.user("sender");
@@ -60,7 +60,7 @@ class HalfOpenExperiment {
                 ExperimentResults.record("ws-half-open", "phase,elapsedSeconds,extraSessions",
                         "idle," + seconds + "," + (gauge() - before));
             }
-            // 남은 세션으로 push하면 프록시 버퍼가 찰 때까지는 성공하고 그 뒤로는 막힌다(F4와 연결)
+            // 좀비 세션이 남았는지와 이후 REST 응답을 함께 기록한다.
             for (int i = 0; i < 30; i++) {
                 long started = System.nanoTime();
                 HttpResponse<String> response = http.send(sender, room, "가".repeat(1000));

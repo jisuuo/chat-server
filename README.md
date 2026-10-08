@@ -9,7 +9,7 @@ HTTP 폴링으로 시작해 WebSocket, 다중 서버, Redis로 확장하는 채�
 - React·TypeScript 채팅 화면: 사용자 선택, 방 목록·생성, 메시지 조회·전송, WebSocket 실시간 수신 (`?transport=polling` 비교 가능)
 - Prometheus·Grafana 메트릭과 Elasticsearch·Kibana 로그 수집
 
-현재 단계는 단일 서버 WebSocket을 사용하는 Step 2입니다. 세션 저장소 동시성 문제(F3)는 재현 후 보완했고, 느린 수신자·half-open·재연결 누락(F4~F6)은 재현 후 보완 방식을 검토 중입니다. 메시지 스키마는 MySQL 스키마 A를 유지하며, 최종 DB 선택은 보류 중입니다. JPA는 메시지 스키마 A를 지원하고, JDBC·JPA 성능 비교는 나머지 계획 완료 후 진행합니다. 자세한 진행 상황과 결정 근거는 [문서 목록](docs/README.md)과 [계획 7](docs/superpowers/plans/2026-10-08-plan7-websocket.md)에 있습니다.
+현재 단계는 단일 서버 WebSocket을 사용하는 Step 2입니다. F3 세션 동시성, F4 느린 수신자 격리, F5 half-open 감지, F6 재연결 누락, F49 첫 조회 중 누락, F50 열린 연결의 push 누락에 대한 복구 경로를 구현했습니다. 열린 방은 60초마다 보이는 메시지 범위를 재조회하며, 그보다 오래된 낮은 ID의 늦은 커밋은 여전히 놓칠 수 있습니다. 메시지 스키마는 MySQL 스키마 A를 유지하며, 최종 DB 선택은 보류 중입니다. JPA는 메시지 스키마 A를 지원하고, JDBC·JPA 성능 비교는 나머지 계획 완료 후 진행합니다. 자세한 진행 상황과 결정 근거는 [문서 목록](docs/README.md)과 [계획 7](docs/superpowers/plans/2026-10-08-plan7-websocket.md)에 있습니다.
 
 ## 로컬 실행
 

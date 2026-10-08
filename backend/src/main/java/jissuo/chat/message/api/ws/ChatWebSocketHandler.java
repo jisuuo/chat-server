@@ -8,6 +8,7 @@ import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.PongMessage;
 
 /**
  * ADR-002: 순수 WebSocketHandler. TextWebSocketHandler를 상속하지 않는 이유는 handleMessage가 handleTextMessage를
@@ -17,23 +18,31 @@ import org.springframework.web.socket.TextMessage;
 public class ChatWebSocketHandler implements WebSocketHandler {
 
     private final WsSessionRegistry sessions;
+    private final WsOutboundQueue outbound;
     private final ChatFrameHandler frames;
+    private final WsHeartbeat heartbeat;
 
-    public ChatWebSocketHandler(WsSessionRegistry sessions, ChatFrameHandler frames) {
+    public ChatWebSocketHandler(WsSessionRegistry sessions, WsOutboundQueue outbound, ChatFrameHandler frames,
+                                WsHeartbeat heartbeat) {
         this.sessions = sessions;
+        this.outbound = outbound;
         this.frames = frames;
+        this.heartbeat = heartbeat;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
+        outbound.register(session);
+        heartbeat.register(session);
         sessions.add(userOf(session).id(), session);
     }
 
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        // ADR-131: 텍스트만 처리한다. 바이너리·pong은 무시한다(ping/pong 없음, F5)
         if (message instanceof TextMessage text) {
             frames.handle(session, text.getPayload());
+        } else if (message instanceof PongMessage) {
+            heartbeat.pong(session);
         }
     }
 
@@ -45,6 +54,8 @@ public class ChatWebSocketHandler implements WebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) {
         sessions.remove(userOf(session).id(), session);
+        heartbeat.unregister(session);
+        outbound.unregister(session);
     }
 
     @Override

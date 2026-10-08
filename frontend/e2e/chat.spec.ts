@@ -123,7 +123,7 @@ test('?transport=polling이면 기존 폴링으로 대화한다 (Step 6 비교�
   await expect(b.locator('.panel')).toContainText('after 커서')
 })
 
-test('F6: 연결이 끊긴 동안 저장된 메시지는 재연결만으로 보이지 않고 새로고침 뒤 보인다', async ({ browser }) => {
+test('F6: 연결이 끊긴 동안 저장된 메시지는 재연결 뒤 조회해 복구한다', async ({ browser }) => {
   const suffix = Date.now().toString(36)
   const { page: a } = await newUser(browser, `reconnect-a-${suffix}`)
   await a.getByLabel('방 이름').fill(`reconnect-${suffix}`)
@@ -161,17 +161,15 @@ test('F6: 연결이 끊긴 동안 저장된 메시지는 재연결만으로 보�
   expect(response.status()).toBe(201)
   blocked = false
   await expect(b.locator('.panel')).toContainText('연결됨', { timeout: POLL_TIMEOUT })
-  await expect(b.getByRole('list', { name: '대화' })).not.toContainText(missed)
+  await expect(b.getByRole('list', { name: '대화' })).toContainText(missed, { timeout: POLL_TIMEOUT })
 
   const after = `재연결 뒤-${suffix}`
   await send(a, after)
   await expect(b.getByRole('list', { name: '대화' })).toContainText(after, { timeout: PUSH_TIMEOUT })
-  await expect(b.getByRole('list', { name: '대화' })).not.toContainText(missed)
-  await b.reload()
   await expect(b.getByRole('list', { name: '대화' })).toContainText(missed)
 })
 
-test('F49: 최초 조회 응답과 소켓 구독 사이에 온 메시지는 화면에서 빠진다', async ({ browser }) => {
+test('F49: 최초 조회 중 수신한 프레임은 오래된 조회 응답과 합친다', async ({ browser }) => {
   const suffix = Date.now().toString(36)
   const roomName = `first-load-${suffix}`
   const missed = `조회 틈-${suffix}`
@@ -216,11 +214,55 @@ test('F49: 최초 조회 응답과 소켓 구독 사이에 온 메시지는 화�
   expect(interceptions).toBeGreaterThan(0)
   // Playwright의 네트워크 프레임 관찰과 별도로 앱의 onmessage 처리까지 확인한다.
   await expect.poll(async () => Number(await receivedCount.textContent())).toBeGreaterThan(receivedBefore)
-  await b.waitForTimeout(250)
-  await expect(b.getByRole('list', { name: '대화' })).not.toContainText(missed)
-  await b.unrouteAll({ behavior: 'wait' })
-  await b.reload()
   await expect(b.getByRole('list', { name: '대화' })).toContainText(missed)
+  await b.unrouteAll({ behavior: 'wait' })
+})
+
+test('F50: 연결이 열린 채 빠진 push를 주기 조회로 복구한다', async ({ browser }) => {
+  const suffix = Date.now().toString(36)
+  const missed = `열린 연결 누락-${suffix}`
+  const { page: a } = await newUser(browser, `open-gap-a-${suffix}`)
+  await a.getByLabel('방 이름').fill(`open-gap-${suffix}`)
+  await a.getByRole('button', { name: '방 만들기' }).click()
+  await expect(a).toHaveURL(/#\/rooms\/\d+$/)
+  const roomHash = new URL(a.url()).hash
+  const roomId = Number(roomHash.split('/').at(-1))
+  const senderId = await a.evaluate(() => Number(sessionStorage.getItem('chat.userId')))
+
+  const b = await (await browser.newContext()).newPage()
+  let dropped = 0
+  await b.routeWebSocket(/\/ws\?userId=/, (ws) => {
+    const server = ws.connectToServer()
+    server.onMessage((message) => {
+      const frame = JSON.parse(String(message))
+      if (frame.type === 'message' && frame.message.content === missed) {
+        dropped++
+      } else {
+        ws.send(message)
+      }
+    })
+  })
+  await b.goto('/')
+  await b.getByLabel('닉네임').fill(`open-gap-b-${suffix}`)
+  await b.getByRole('button', { name: '새 사용자로 시작' }).click()
+  await enter(b, roomHash)
+  await expect(b.locator('.panel')).toContainText('연결됨')
+  await b.goto('/#/rooms')
+  await b.clock.install()
+  await b.goto(`/${roomHash}`)
+  await expect(b.getByLabel('메시지')).toBeVisible()
+  await expect(b.locator('.panel')).toContainText('연결됨')
+
+  const response = await a.request.post(`/api/rooms/${roomId}/messages`, {
+    headers: { 'X-User-Id': String(senderId) }, data: { content: missed },
+  })
+  expect(response.status()).toBe(201)
+  await expect.poll(() => dropped).toBe(1)
+  await expect(b.getByRole('list', { name: '대화' })).not.toContainText(missed)
+
+  await b.clock.fastForward(60_000)
+  await expect(b.getByRole('list', { name: '대화' })).toContainText(missed)
+  await expect(b.locator('.panel')).toContainText('연결됨')
 })
 
 test('비멤버가 방 링크를 열면 입장 버튼이 보이고 메시지는 보이지 않는다', async ({ browser }) => {

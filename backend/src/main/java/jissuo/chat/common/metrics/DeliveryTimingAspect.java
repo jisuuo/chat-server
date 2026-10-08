@@ -12,7 +12,7 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/** ADR-135: 트랜잭션 프록시 바깥에서 재므로 receive, save, fanout, push 시간은 서로 겹친다. */
+/** ADR-135·143: receive/save/fanout은 요청 스레드, push는 세션 송신 작업자에서 측정한다. */
 @Aspect
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
@@ -29,11 +29,9 @@ public class DeliveryTimingAspect {
         String transport = !stage.transport().isEmpty() ? stage.transport()
                 : origin != null ? origin.transport() : "unknown";
         long started = System.nanoTime();
-        boolean completed = false;
         Object result = null;
         try {
             result = pjp.proceed();
-            completed = true;
             return result;
         } finally {
             long ended = System.nanoTime();
@@ -41,11 +39,6 @@ public class DeliveryTimingAspect {
             if (!("push".equals(stage.value()) && Boolean.FALSE.equals(result))) {
                 Timer.builder("chat.delivery.stage").tag("stage", stage.value()).tag("transport", transport)
                         .register(meters).record(ended - started, TimeUnit.NANOSECONDS);
-            }
-            // push가 실패하면 마지막 전달이 끝나지 않았으므로 완료 지연 표본에 넣지 않는다.
-            if (completed && stage.total() && origin != null) {
-                Timer.builder("chat.delivery.total").tag("transport", transport)
-                        .register(meters).record(ended - origin.startedNanos(), TimeUnit.NANOSECONDS);
             }
         }
     }

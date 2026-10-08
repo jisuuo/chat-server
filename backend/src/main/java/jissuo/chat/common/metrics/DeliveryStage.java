@@ -11,5 +11,4 @@ import java.lang.annotation.Target;
 public @interface DeliveryStage {
     String value();
     String transport() default "";
-    boolean total() default false;
 }

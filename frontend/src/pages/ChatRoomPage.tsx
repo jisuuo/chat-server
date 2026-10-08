@@ -43,6 +43,7 @@ export function ChatRoomPage({ userId, roomId, title, onBack }: Props) {
       </header>
       {room.error && <p role="alert" className="error">{room.error}</p>}
       {room.status === 'loading' && <p className="placeholder">불러오는 중…</p>}
+      {room.status === 'error' && <button onClick={() => void room.retry()}>다시 시도</button>}
       {room.status === 'notMember' && (
         <div className="join">
           <p>이 방의 멤버가 아닙니다.</p>
