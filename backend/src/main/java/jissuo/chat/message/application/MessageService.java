@@ -4,10 +4,12 @@ import java.time.Clock;
 import java.util.List;
 import jissuo.chat.common.ChatException;
 import jissuo.chat.common.ErrorCode;
+import jissuo.chat.message.domain.DeliveryOrigin;
 import jissuo.chat.message.domain.Message;
 import jissuo.chat.message.domain.MessageContent;
 import jissuo.chat.message.domain.MessageCursor;
 import jissuo.chat.message.domain.MessageRepository;
+import jissuo.chat.message.domain.MessageSentEvent;
 import jissuo.chat.room.domain.AccessDeniedEvent;
 import jissuo.chat.room.domain.Membership;
 import jissuo.chat.room.domain.MembershipRepository;
@@ -36,10 +38,19 @@ public class MessageService {
 
     @Transactional
     public Message send(long userId, long roomId, String content) {
+        // 실험 코드(experiment/**)가 서비스를 직접 부른다. 전달 시간 지표에서 HTTP·WS와 섞이지 않게 통로를 따로 둔다.
+        // 아래 메서드를 같은 객체 안에서 부르므로 트랜잭션은 이 메서드의 프록시가 연다
+        return send(userId, roomId, content, DeliveryOrigin.start("internal"));
+    }
+
+    @Transactional
+    public Message send(long userId, long roomId, String content, DeliveryOrigin origin) {
         requireMembership(userId, roomId);
         Message saved = messages.save(roomId, userId, new MessageContent(content), clock.instant());
         // R7: 방 목록 정렬값은 메시지와 같은 트랜잭션에서 전진시킨다.
         rooms.advanceLastMessageId(roomId, saved.id());
+        // 계획 7 세부 4: 롤백된 메시지를 보내지 않도록 리스너가 커밋 뒤에 받는다
+        events.publishEvent(new MessageSentEvent(saved, origin.startedNanos(), origin.transport()));
         return saved;
     }
 

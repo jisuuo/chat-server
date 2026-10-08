@@ -2,6 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { joinRoom, leaveRoom, readMessages, sendMessage } from '../api/chat'
 import { ApiError, errorMessage } from '../api/client'
 import type { Message } from '../api/types'
+import type { SocketStats } from '../realtime/chatSocket'
+import { currentTransport } from '../realtime/transport'
+import type { Transport } from '../realtime/transport'
+import { useChatSocket, useSocketStats } from '../realtime/useChatSocket'
 import { lastId, mergeMessages } from './merge'
 import { DEFAULT_POLL_INTERVAL_MS, usePolling } from './usePolling'
 import type { PollStats } from './usePolling'
@@ -20,11 +24,16 @@ export type RoomMessages = {
   send: (content: string) => Promise<boolean>
   loadOlder: () => Promise<void>
   leave: () => Promise<boolean>
+  transport: Transport
   polling: PollingControls
+  connection: SocketStats | null
 }
 
 // ADR-108: P7에서 수신 방식(폴링 → WebSocket)만 바꾸도록 화면과 분리한다
 export function useRoomMessages(userId: number, roomId: number): RoomMessages {
+  const [transport] = useState(currentTransport)
+  const socket = useChatSocket()
+  const connection = useSocketStats(socket)
   const [status, setStatus] = useState<RoomStatus>('loading')
   const [messages, setMessages] = useState<Message[]>([])
   const [hasOlder, setHasOlder] = useState(false)
@@ -79,7 +88,17 @@ export function useRoomMessages(userId: number, roomId: number): RoomMessages {
     return { hasMore: data.hasMore, info, count: data.messages.length }
   }, [userId, roomId])
 
-  const stats = usePolling({ enabled: status === 'ready' && !paused, intervalMs, poll })
+  const stats = usePolling({ enabled: transport === 'polling' && status === 'ready' && !paused, intervalMs, poll })
+
+  useEffect(() => {
+    if (transport !== 'websocket' || socket === null || status !== 'ready') return
+    // 계획 7 세부 9: 다른 방 메시지는 무시한다(방 목록 자동 갱신 없음, ADR-084). 내 메시지도 push로 받는다.
+    // 구독 전에 온 push는 받지 않는다(F49, 장애 선행)
+    return socket.subscribe((frame) => {
+      if (frame.type !== 'message' || frame.message.roomId !== roomId) return
+      setMessages((current) => mergeMessages(current, [frame.message]))
+    })
+  }, [transport, socket, status, roomId])
 
   async function join() {
     try {
@@ -127,7 +146,7 @@ export function useRoomMessages(userId: number, roomId: number): RoomMessages {
   }
 
   return {
-    status, messages, hasOlder, error, join, send, loadOlder, leave,
+    status, messages, hasOlder, error, join, send, loadOlder, leave, transport, connection,
     polling: {
       stats, cursor: cursorView, intervalMs, paused, setIntervalMs,
       togglePause: () => setPaused((current) => !current),

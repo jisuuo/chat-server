@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { PollingPanel } from '../components/PollingPanel'
+import { ConnectionPanel } from '../components/ConnectionPanel'
 import { Composer } from '../components/Composer'
 import { MessageList } from '../components/MessageList'
 import { buildChatItems } from '../messages/chatItems'
@@ -26,11 +27,15 @@ export function ChatRoomPage({ userId, roomId, title, onBack }: Props) {
         <h2>{title}</h2>
         {room.status === 'ready' && (
           <>
-            {/* ADR-114: 관측용 패널(ADR-081)은 남기되 평소에는 접어 둔다 */}
+            {/* ADR-114: 관측용 패널(ADR-081)은 남기되 평소에는 접어 둔다. 계획 7 세부 11: 통로에 따라 내용이 다르다 */}
             <details className="debug">
-              <summary>폴링 상태</summary>
-              <PollingPanel stats={room.polling.stats} cursor={room.polling.cursor} intervalMs={room.polling.intervalMs}
-                paused={room.polling.paused} onIntervalChange={room.polling.setIntervalMs} onTogglePause={room.polling.togglePause} />
+              <summary>{room.transport === 'polling' ? '폴링 상태' : '연결 상태'}</summary>
+              {room.transport === 'polling' ? (
+                <PollingPanel stats={room.polling.stats} cursor={room.polling.cursor} intervalMs={room.polling.intervalMs}
+                  paused={room.polling.paused} onIntervalChange={room.polling.setIntervalMs} onTogglePause={room.polling.togglePause} />
+              ) : (
+                room.connection && <ConnectionPanel stats={room.connection} />
+              )}
             </details>
             <button onClick={() => void leave()}>나가기</button>
           </>

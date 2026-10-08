@@ -6,6 +6,8 @@ import * as chat from '../api/chat'
 import { ApiError } from '../api/client'
 import type { Message } from '../api/types'
 import { DEFAULT_POLL_INTERVAL_MS } from '../messages/usePolling'
+import { ChatSocketContext } from '../realtime/useChatSocket'
+import { fakeChatSocket } from '../test/fakeChatSocket'
 import { ChatRoomPage } from './ChatRoomPage'
 
 vi.mock('../api/chat')
@@ -18,8 +20,9 @@ describe('ChatRoomPage', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     vi.mocked(chat.listUsers).mockResolvedValue({ data: [], info })
+    window.history.replaceState(null, '', '/?transport=polling')
   })
-  afterEach(() => vi.useRealTimers())
+  afterEach(() => { vi.useRealTimers(); window.history.replaceState(null, '', '/') })
 
   it('멤버면 최신 메시지를 작성자 id와 함께 보여 준다', async () => {
     vi.mocked(chat.readMessages).mockResolvedValue(page([msg(1, 2, '안녕')]))
@@ -194,5 +197,28 @@ describe('ChatRoomPage', () => {
     await act(async () => finishNewPoll(page([msg(12)])))
     expect(screen.getByText('m12')).toBeInTheDocument()
     expect(panel.getByText('12')).toBeInTheDocument()
+  })
+})
+
+describe('ChatRoomPage (websocket)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(chat.listUsers).mockResolvedValue({ data: [], info })
+    window.history.replaceState(null, '', '/')
+  })
+
+  it('push로 받은 메시지를 보이고, 연결 상태 패널을 보인다', async () => {
+    const fake = fakeChatSocket()
+    vi.mocked(chat.readMessages).mockResolvedValue(page([msg(10)]))
+    render(<ChatSocketContext.Provider value={fake.socket}>
+      <ChatRoomPage userId={1} roomId={1} title="잡담" onBack={vi.fn()} />
+    </ChatSocketContext.Provider>)
+    await screen.findByText('m10')
+
+    act(() => fake.push({ type: 'message', message: msg(11, 3, '실시간') }))
+    expect(screen.getByText('실시간')).toBeInTheDocument()
+    expect(screen.queryByText('폴링 상태')).not.toBeInTheDocument()
+    await userEvent.click(screen.getByText('연결 상태'))
+    expect(within(screen.getByRole('complementary', { name: '연결 상태' })).getByText('연결됨')).toBeInTheDocument()
   })
 })

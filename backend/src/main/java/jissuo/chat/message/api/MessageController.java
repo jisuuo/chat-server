@@ -9,6 +9,7 @@ import jissuo.chat.common.ApiResponse;
 import jissuo.chat.common.ChatException;
 import jissuo.chat.common.ErrorCode;
 import jissuo.chat.message.application.MessageService;
+import jissuo.chat.message.domain.DeliveryOrigin;
 import jissuo.chat.message.domain.MessageCursor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,9 +31,11 @@ public class MessageController {
 
     @PostMapping("/api/rooms/{roomId}/messages")
     @ResponseStatus(HttpStatus.CREATED)
-    ApiResponse<MessageResponse> send(@CurrentUser AuthUser user, @PathVariable long roomId,
-                                      @Valid @RequestBody SendMessageRequest request) {
-        return ApiResponse.ok(MessageResponse.from(messages.send(user.id(), roomId, request.content())));
+    // 계획 7 세부 7A: 작업 13의 AOP 프록시가 가로채도록 public으로 둔다
+    public ApiResponse<MessageResponse> send(@CurrentUser AuthUser user, @PathVariable long roomId,
+                                             @Valid @RequestBody SendMessageRequest request) {
+        DeliveryOrigin origin = DeliveryOrigin.start("rest");
+        return ApiResponse.ok(MessageResponse.from(messages.send(user.id(), roomId, request.content(), origin)));
     }
 
     @GetMapping("/api/rooms/{roomId}/messages")

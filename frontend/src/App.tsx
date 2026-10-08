@@ -3,6 +3,8 @@ import type { Room } from './api/types'
 import { ChatRoomPage } from './pages/ChatRoomPage'
 import { LoginPage } from './pages/LoginPage'
 import { RoomListPage } from './pages/RoomListPage'
+import { currentTransport } from './realtime/transport'
+import { ChatSocketProvider } from './realtime/useChatSocket'
 import { ROOMS_HASH, roomHash, useHashRoute } from './route'
 import { clearUserId, loadUserId, saveUserId } from './session'
 import { NicknameProvider } from './users/useNicknames'
@@ -35,27 +37,30 @@ export default function App() {
 
   return (
     <NicknameProvider key={userId}>
-      {/* ADR-107: 좁은 화면에서는 data-view로 목록과 대화 중 하나만 보인다 */}
-      <div className="app" data-view={roomId === null ? 'rooms' : 'room'}>
-        <header className="top">
-          <strong>chat</strong>
-          <span className="me">사용자 #{userId}</span>
-          <button onClick={switchUser}>사용자 바꾸기</button>
-        </header>
-        <div className="shell">
-          <RoomListPage userId={userId} activeRoomId={roomId} onRoomsChange={setRooms}
-            onOpen={(id) => (window.location.hash = roomHash(id))} />
-          <main className="main">
-            {roomId === null ? (
-              <p className="placeholder">방을 고르거나 새로 만드세요.</p>
-            ) : (
-              // ADR-082: 방을 옮기면 커서·메시지 상태를 새로 시작하도록 다시 만든다
-              <ChatRoomPage key={roomId} userId={userId} roomId={roomId} title={title}
-                onBack={() => (window.location.hash = ROOMS_HASH)} />
-            )}
-          </main>
+      {/* 계획 7 세부 8·10: 사용자 연결은 탭마다 하나. polling 모드에서는 열지 않는다 */}
+      <ChatSocketProvider key={userId} userId={userId} enabled={currentTransport() === 'websocket'}>
+        {/* ADR-107: 좁은 화면에서는 data-view로 목록과 대화 중 하나만 보인다 */}
+        <div className="app" data-view={roomId === null ? 'rooms' : 'room'}>
+          <header className="top">
+            <strong>chat</strong>
+            <span className="me">사용자 #{userId}</span>
+            <button onClick={switchUser}>사용자 바꾸기</button>
+          </header>
+          <div className="shell">
+            <RoomListPage userId={userId} activeRoomId={roomId} onRoomsChange={setRooms}
+              onOpen={(id) => (window.location.hash = roomHash(id))} />
+            <main className="main">
+              {roomId === null ? (
+                <p className="placeholder">방을 고르거나 새로 만드세요.</p>
+              ) : (
+                // ADR-082: 방을 옮기면 커서·메시지 상태를 새로 시작하도록 다시 만든다
+                <ChatRoomPage key={roomId} userId={userId} roomId={roomId} title={title}
+                  onBack={() => (window.location.hash = ROOMS_HASH)} />
+              )}
+            </main>
+          </div>
         </div>
-      </div>
+      </ChatSocketProvider>
     </NicknameProvider>
   )
 }

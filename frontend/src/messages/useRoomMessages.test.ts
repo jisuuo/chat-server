@@ -1,8 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createElement } from 'react'
+import type { PropsWithChildren } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as chat from '../api/chat'
 import { ApiError } from '../api/client'
 import type { Message } from '../api/types'
+import { ChatSocketContext } from '../realtime/useChatSocket'
+import { fakeChatSocket } from '../test/fakeChatSocket'
 import { useRoomMessages } from './useRoomMessages'
 
 vi.mock('../api/chat')
@@ -12,7 +16,12 @@ const msg = (id: number, senderId = 2): Message => ({ id, roomId: 1, senderId, c
 const page = (messages: Message[], hasMore = false) => ({ data: { messages, hasMore }, info })
 
 describe('useRoomMessages', () => {
-  beforeEach(() => vi.resetAllMocks())
+  // 계획 7 세부 10: 기존 테스트는 ?transport=polling 회귀로 남긴다
+  beforeEach(() => {
+    vi.resetAllMocks()
+    window.history.replaceState(null, '', '/?transport=polling')
+  })
+  afterEach(() => window.history.replaceState(null, '', '/'))
 
   it('최신 메시지를 읽고 커서를 마지막 id로 둔다', async () => {
     vi.mocked(chat.readMessages).mockResolvedValue(page([msg(3), msg(4)], true))
@@ -58,5 +67,44 @@ describe('useRoomMessages', () => {
     await act(async () => { ok = await result.current.leave() })
     expect(ok).toBe(true)
     expect(chat.leaveRoom).toHaveBeenCalledWith(1, 1)
+  })
+})
+
+describe('useRoomMessages (websocket)', () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    window.history.replaceState(null, '', '/')
+  })
+
+  function withSocket(socket: ReturnType<typeof fakeChatSocket>['socket']) {
+    return ({ children }: PropsWithChildren) => createElement(ChatSocketContext.Provider, { value: socket }, children)
+  }
+
+  it('같은 방 push를 합치고 다른 방은 무시하며 폴링하지 않는다', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const fake = fakeChatSocket()
+    vi.mocked(chat.readMessages).mockResolvedValue(page([msg(1)]))
+    const { result } = renderHook(() => useRoomMessages(1, 1), { wrapper: withSocket(fake.socket) })
+    await waitFor(() => expect(result.current.status).toBe('ready'))
+    expect(result.current.transport).toBe('websocket')
+
+    act(() => fake.push({ type: 'message', message: msg(3) }))
+    act(() => fake.push({ type: 'message', message: msg(2) }))
+    act(() => fake.push({ type: 'message', message: { ...msg(4), roomId: 9 } }))
+    expect(result.current.messages.map((m) => m.id)).toEqual([1, 2, 3])
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10_000) })
+    expect(chat.readMessages).toHaveBeenCalledTimes(1)
+    expect(result.current.connection?.state).toBe('open')
+    vi.useRealTimers()
+  })
+
+  it('ready가 되기 전(멤버 아님)에는 push를 합치지 않는다 (F49 관찰 대상)', async () => {
+    const fake = fakeChatSocket()
+    vi.mocked(chat.readMessages).mockRejectedValue(new ApiError(403, 'NOT_A_MEMBER', '멤버가 아닙니다.', { ...info, status: 403 }))
+    const { result } = renderHook(() => useRoomMessages(1, 1), { wrapper: withSocket(fake.socket) })
+    await waitFor(() => expect(result.current.status).toBe('notMember'))
+    act(() => fake.push({ type: 'message', message: msg(5) }))
+    expect(result.current.messages).toEqual([])
   })
 })

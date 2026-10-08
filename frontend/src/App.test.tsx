@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { PropsWithChildren } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as chat from './api/chat'
 import App from './App'
@@ -7,12 +8,18 @@ import App from './App'
 vi.mock('./api/chat')
 vi.mock('./pages/RoomListPage', () => ({ RoomListPage: () => <p>방 목록 화면</p> }))
 vi.mock('./pages/ChatRoomPage', () => ({ ChatRoomPage: ({ roomId, title }: { roomId: number; title: string }) => <p>채팅방 {roomId} {title}</p> }))
+vi.mock('./realtime/useChatSocket', () => ({
+  ChatSocketProvider: ({ userId, enabled, children }: PropsWithChildren<{ userId: number; enabled: boolean }>) => (
+    <div data-testid="socket" data-user={userId} data-enabled={String(enabled)}>{children}</div>
+  ),
+}))
 
 describe('App', () => {
   beforeEach(() => {
     vi.resetAllMocks()
     sessionStorage.clear()
     window.location.hash = ''
+    window.history.replaceState(null, '', '/')
   })
 
   it('사용자가 없으면 사용자 선택 화면', () => {
@@ -62,5 +69,17 @@ describe('App', () => {
     await act(async () => finishCreate({ data: { id: 5, nickname: '지수' }, info: { status: 201, requestId: 'r', durationMs: 1 } }))
     expect(sessionStorage.getItem('chat.userId')).toBe('12')
     expect(screen.getByText('사용자 #12')).toBeInTheDocument()
+  })
+
+  it('사용자 연결을 열고, ?transport=polling이면 열지 않는다 (계획 7 세부 10)', () => {
+    sessionStorage.setItem('chat.userId', '3')
+    const { unmount } = render(<App />)
+    expect(screen.getByTestId('socket')).toHaveAttribute('data-user', '3')
+    expect(screen.getByTestId('socket')).toHaveAttribute('data-enabled', 'true')
+    unmount()
+
+    window.history.replaceState(null, '', '/?transport=polling')
+    render(<App />)
+    expect(screen.getByTestId('socket')).toHaveAttribute('data-enabled', 'false')
   })
 })

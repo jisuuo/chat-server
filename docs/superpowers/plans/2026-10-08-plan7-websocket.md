@@ -1,6 +1,6 @@
 # 계획 7: WebSocket 서버 1대 구현 계획 (Step 2, 고도화 P7)
 
-> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 구현 및 통합 검증 완료. 웨이브 2 승인 대기.
+> **진행 상태 (2026-10-08):** 웨이브 1(작업 1·2·5) 커밋·푸시 완료. 웨이브 2(작업 3·6) 구현 및 통합 검증 완료. 웨이브 3 승인 대기.
 
 > **실행하는 에이전트에게**: 작업은 아래 "실행 순서와 병렬화"의 **웨이브 단위로 사용자 승인을 받고** 시작한다. 같은 웨이브의 작업은 동시에 진행할 수 있다. 웨이브가 끝나면 통합 확인을 하고 결과(테스트 출력 포함)를 보고한 뒤 멈춘다. **커밋하지 않는다** (사용자가 요청할 때만). 단계는 체크박스(`- [ ]`)로 추적한다. 장애 재현 작업(9~12)은 웨이브마다 멈추고 측정값과 예상을 나눠 보고한다.
 
@@ -41,7 +41,7 @@
 | 1 | 엔드포인트 | `/ws` 하나, 순수 `WebSocketHandler`(ADR-002). Origin 검사는 Spring 기본(같은 origin만, ADR-028). `setAllowedOrigins`를 부르지 않는다 | 다른 origin 허용 설정이 필요 없다. Vite proxy는 Host를 바꾸지 않으므로(`changeOrigin` 없음) 같은 origin으로 보인다(작업 8에서 확인) |
 | 2 | 핸드셰이크 인증 | `auth/QueryUserIdHandshakeInterceptor`가 `userId`를 `Authenticator`에 넘기고 `AuthUser`를 세션 속성에 둔다. 실패 시 401로 거절하고 `AuthenticationFailedEvent(path=/ws)`를 발행해 감사에 남긴다 | ADR-006의 "통로마다 추출만 따로" 그대로. 존재하지 않는 사용자 id는 형식이 맞으면 통과한다(ADR-005와 같은 수준, DB 조회 없음) |
 | 3 | 프로토콜 (JSON 텍스트 프레임) | C→S `{"type":"send","roomId":1,"content":"..."}` / S→C `{"type":"message","message":{id,roomId,senderId,content,createdAt}}` / S→C `{"type":"error","roomId":1,"code":"NOT_A_MEMBER","message":"..."}`(보낸 세션에만). 응답 짝 맞춤용 id는 두지 않는다(중복 방지 키로 번질 수 있어 ADR-034·F33 유지). 보낸 사람도 `message` push로 자기 메시지를 받는다. 잘못된 JSON·모르는 type·검증 실패는 `INVALID_REQUEST` error, 연결은 유지 | 화면은 REST와 같은 `Message` 모양을 그대로 `mergeMessages`로 합친다 |
-| 4 | 전달(fan-out) | `MessageService.send`가 `MessageSentEvent`를 발행 → `message/application/MessageFanout`이 `@TransactionalEventListener`(AFTER_COMMIT)로 받아 `MembershipRepository.findUserIds(roomId)` 조회 → `MessagePusher.push(userIds, message, origin)`. 보내는 스레드에서 동기로 실행(F4 재현 조건). REST 전송과 WS 전송 모두 같은 경로. push 중 예외(`IOException`, `IllegalStateException`)는 잡지 않고 올려 보낸다(흔한 구현, F44 재현 조건). 닫힌 세션은 `isOpen()`으로 건너뛴다 | 롤백된 메시지를 보내지 않는다. 동기라 원인이 한 스레드에 보인다 |
+| 4 | 전달(fan-out) | `MessageService.send`가 `MessageSentEvent`를 발행 → `message/application/MessageFanout`이 `@TransactionalEventListener`(AFTER_COMMIT)로 받아 `MembershipRepository.findUserIds(roomId)` 조회 → `MessagePusher.push(userIds, message, origin)`. 보내는 스레드에서 동기로 실행(F4 재현 조건). REST 전송과 WS 전송 모두 같은 경로. push 중 예외(`IOException`, `IllegalStateException`)는 애플리케이션 코드에서 잡지 않는다. Spring의 `afterCompletion` 경계에서 기록하고 요청자에게는 전파하지 않는다(F44). 닫힌 세션은 `isOpen()`으로 건너뛴다 | 롤백된 메시지를 보내지 않는다. 동기라 원인이 한 스레드에 보인다 |
 | 5 | 패키지·의존 | `MessagePusher` 인터페이스는 `message/application`, 구현(세션 저장소·핸들러·프레임 처리·전송)은 `message/api/ws/`(api → application 방향 유지). `message → room.domain`만 쓰므로 ArchUnit 규칙 그대로 통과 | application이 WebSocket을 모른다 |
 | 6 | 세션 저장소 | `WsSessionRegistry`: `HashMap<Long, List<WebSocketSession>>`(사용자 → 탭들), 목록은 `ArrayList`. `sessionsOf`는 내부 목록을 그대로 돌려준다 | D6, F3 재현 조건 |
 | 7 | 관측 | 게이지 `chat.ws.sessions`(저장소의 세션 수), 카운터 `chat.ws.frames{type}`(`send`·`invalid` 받은 프레임, `message`·`error` 보낸 프레임). MDC는 핸드셰이크 HTTP 요청에만 있고, 프레임 처리에서는 세부 #7B가 새로 만든다. 비동기 전달 스레드로 이어지지 않는 문제(F30)는 미리 고치지 않는다 | |
@@ -57,13 +57,14 @@
 
 | # | 가설 | 어디서 드러날지 |
 |---|---|---|
-| F43 | 같은 세션에 두 스레드가 동시에 `sendMessage`하면(두 사람이 동시에 보내 같은 수신자에게 push, 또는 push와 오류 프레임이 겹침) `IllegalStateException`(TEXT_PARTIAL_WRITING)으로 전송이 실패하고, 예외가 보낸 사람 쪽으로 올라간다 | 작업 10 실험, 부하 시 `GlobalExceptionHandler` 500 로그 |
-| F44 | AFTER_COMMIT 리스너의 push 예외로 "저장은 됐는데 응답은 실패": REST는 500, WS는 Spring 예외 데코레이터가 보낸 사람의 연결을 1011로 닫는다 (엔지니어링 핵심 문제 3) | 작업 10(느린 수신자의 쓰기 시간 초과), F43 |
+| F43 | 같은 세션에 두 스레드가 동시에 `sendMessage`하면(두 사람이 동시에 보내 같은 수신자에게 push, 또는 push와 오류 프레임이 겹침) 전송 예외가 발생할 수 있다. 예외가 난 세션 뒤의 fan-out 대상은 push를 받지 못할 수 있다 | 작업 10 실험에서 예외 종류·후속 수신자·응답을 분리해 측정 |
+| F44 | `AFTER_COMMIT` 리스너의 push 예외는 Spring의 `afterCompletion(COMMITTED)`에서 로그에 남고 요청자에게 전파되지 않는다(코드·프레임워크 계약 확인, 실제 실패 미재현). 저장된 메시지에 REST 201이 나가면서 일부 수신자의 화면에는 빠질 수 있다 | 작업 10에서 전송 실패를 주입해 DB 저장·REST/WS 결과·후속 수신자를 확인. 이전의 REST 500/WS 1011 예상은 철회 |
 | F45 | 두 사람이 동시에 보내면 push 도착 순서가 id 순서와 다를 수 있다(F22와 같은 계열). 화면은 `mergeMessages`의 id 정렬로 보이므로 늦게 온 작은 id가 위쪽에 끼어든다 | 두 탭 동시 전송 관찰 |
 | F46 | 나가기 커밋과 멤버 id 조회가 경쟁하면 막 나간 사용자의 탭에 push된다(F23 계열) | 나가기·전송 동시 실험 |
 | F47 | 재연결 1초 고정이라 서버 재시작 때 모든 탭이 같은 순간에 다시 붙는다(F17 연결) | 작업 8 브라우저 확인(백엔드 재시작) |
 | F48 | 단계별 타이머 aspect의 오버헤드(프록시 호출, 타이머 조회, 히스토그램)가 메시지당 지연에 섞인다 | 이후 부하 비교(W1~W5, ADR-128) 때 aspect 켬/끔 비교 |
 | F49 | **(계획 작성 중 추가, 검토 필요)** 최초 조회 응답과 구독 시작(`ready` 뒤 effect) 사이, 그리고 나가기 직후 다시 입장할 때 온 push는 버려진다(F6의 축소판) | 단위 테스트로는 드러나지 않음, 작업 12에서 함께 관찰 |
+| F50 | DB 저장 후 실시간 push가 실패해도 열린 WebSocket 화면은 누락을 감지하거나 재조회하지 않는다. 조회 계기가 없으면 표시 지연에 상한이 없다 | [장애 실험 목록](../../failure-lab.md)의 추후 결정 항목. 연결 유지와 재연결 사례를 나눠 관찰하고 허용 지연·재조회 계기·오류 표시 방식을 결정 |
 
 ## 파일 구조
 ```
@@ -1071,7 +1072,7 @@ public final class ChatHttp {
 ```
 - transport 값: `rest`(REST 컨트롤러), `ws`(작업 4), `internal`(서비스 직접 호출)
 
-- [ ] **Step 1: HTTP 도우미** — `backend/src/test/java/jissuo/chat/support/ChatHttp.java`
+- [x] **Step 1: HTTP 도우미** — `backend/src/test/java/jissuo/chat/support/ChatHttp.java`
 ```java
 package jissuo.chat.support;
 
@@ -1126,7 +1127,7 @@ public final class ChatHttp {
 }
 ```
 
-- [ ] **Step 2: 실패하는 테스트** — `backend/src/test/java/jissuo/chat/message/api/ws/ChatWebSocketContract.java`
+- [x] **Step 2: 실패하는 테스트** — `backend/src/test/java/jissuo/chat/message/api/ws/ChatWebSocketContract.java`
 ```java
 package jissuo.chat.message.api.ws;
 
@@ -1278,9 +1279,9 @@ class MySqlChatWebSocketTest extends ChatWebSocketContract {
   (PostgreSQL은 `@ActiveProfiles("postgres")`, `PostgresContainerSupport.register`)
   - Jackson 3의 문자열 읽기는 `asString()`이다. 이름이 다르면 컴파일 오류를 보고 실제 이름으로 바꾼다.
 
-- [ ] **Step 3: 실패 확인** — `./gradlew test --tests 'jissuo.chat.message.api.ws.*ChatWebSocketTest'` → FAIL(프레임이 오지 않음: "5초 안에 프레임이 오지 않았다")
+- [x] **Step 3: 실패 확인** — `./gradlew test --tests 'jissuo.chat.message.api.ws.*ChatWebSocketTest'` → FAIL(프레임이 오지 않음: "5초 안에 프레임이 오지 않았다")
 
-- [ ] **Step 4: 구현**
+- [x] **Step 4: 구현**
 
 `message/domain/DeliveryOrigin.java`
 ```java
@@ -1423,7 +1424,7 @@ public class WsFrameSender {
         try {
             session.sendMessage(frame);
         } catch (IOException e) {
-            // F44: 저장은 커밋됐지만 이 예외가 보낸 사람의 응답을 실패로 만든다 (재현 전)
+            // F44: 저장은 커밋됐다. AFTER_COMMIT 리스너 예외는 Spring이 로그에 남기고 요청자에게 전파하지 않는다
             throw new UncheckedIOException(e);
         }
         meters.counter("chat.ws.frames", "type", "message").increment();
@@ -1486,12 +1487,12 @@ public class WsMessagePusher implements MessagePusher {
     }
 ```
 
-- [ ] **Step 5: 통과 확인** — `./gradlew test --tests 'jissuo.chat.message.*' --tests 'jissuo.chat.ArchitectureTest'` → PASS (기존 `MessageApiContract` 4개 하위 클래스도 그대로 통과해야 한다)
+- [x] **Step 5: 통과 확인** — `./gradlew test --tests 'jissuo.chat.message.*' --tests 'jissuo.chat.ArchitectureTest'` → PASS (기존 `MessageApiContract` 4개 하위 클래스도 그대로 통과해야 한다)
 
-- [ ] **Step 6: 전체 확인** — `./gradlew test` → PASS. 실패하면 보고하고 멈춘다.
+- [x] **Step 6: 전체 확인** — `./gradlew test` → PASS. 실패하면 보고하고 멈춘다.
   - 기존 실험(`experiment/**`)은 이제 전송마다 커밋 뒤 `findUserIds` 조회가 한 번 늘어난다. 실험 결과를 계획 7 이전 값과 그대로 비교하지 않도록 작업 8에서 기록한다.
 
-- [ ] **Step 7: 결과 보고 후 멈춤**
+- [x] **Step 7: 결과 보고 후 멈춤**
 
 ---
 
@@ -1522,7 +1523,7 @@ connection: SocketStats | null
 export function fakeChatSocket(): { socket: ChatSocket; sent: { roomId: number; content: string }[]; push: (frame: ServerFrame) => void; disconnect: () => void }
 ```
 
-- [ ] **Step 1: 가짜 소켓** — `frontend/src/test/fakeChatSocket.ts`
+- [x] **Step 1: 가짜 소켓** — `frontend/src/test/fakeChatSocket.ts`
 ```ts
 import type { ChatSocket, ServerFrame, SocketStats } from '../realtime/chatSocket'
 
@@ -1556,7 +1557,7 @@ export function fakeChatSocket() {
 }
 ```
 
-- [ ] **Step 2: 실패하는 테스트**
+- [x] **Step 2: 실패하는 테스트**
 
 `frontend/src/realtime/transport.test.ts`
 ```ts
@@ -1750,9 +1751,9 @@ vi.mock('./realtime/useChatSocket', () => ({
   })
 ```
 
-- [ ] **Step 3: 실패 확인** — `npx vitest run src/realtime src/components/ConnectionPanel.test.tsx src/messages/useRoomMessages.test.ts src/pages/ChatRoomPage.test.tsx src/App.test.tsx` → 새 테스트 FAIL(모듈 없음), 기존 polling 테스트는 PASS
+- [x] **Step 3: 실패 확인** — `npx vitest run src/realtime src/components/ConnectionPanel.test.tsx src/messages/useRoomMessages.test.ts src/pages/ChatRoomPage.test.tsx src/App.test.tsx` → 새 테스트 FAIL(모듈 없음), 기존 polling 테스트는 PASS
 
-- [ ] **Step 4: 구현**
+- [x] **Step 4: 구현**
 
 `frontend/src/realtime/transport.ts`
 ```ts
@@ -1901,9 +1902,9 @@ import { ChatSocketProvider } from './realtime/useChatSocket'
       '/ws': { target: 'ws://localhost:8080', ws: true, xfwd: true },
 ```
 
-- [ ] **Step 5: 통과 확인** — `npx vitest run && npx tsc -b && npm run lint` → PASS (기존 테스트 포함)
+- [x] **Step 5: 통과 확인** — `npx vitest run && npx tsc -b && npm run lint` → PASS (기존 테스트 포함)
 
-- [ ] **Step 6: 결과 보고 후 멈춤**
+- [x] **Step 6: 결과 보고 후 멈춤**
 
 ---
 
@@ -2194,7 +2195,7 @@ public class ChatFrameHandler {
         try {
             messages.send(user.id(), frame.roomId(), frame.content(), origin);
             return FrameOutcome.ok("send", frame.roomId());
-            // ChatException이 아닌 예외(F44의 push 실패 등)는 잡지 않는다. Spring이 연결을 1011로 닫는다(재현 전)
+            // 서비스 본문의 예외는 잡지 않는다. AFTER_COMMIT push 예외(F44)는 리스너 경계에서 로그에 남는다
         } catch (ChatException e) {
             return reject(session, "send", frame.roomId(), e.errorCode());
         }
@@ -3089,7 +3090,7 @@ test('?transport=polling이면 기존 폴링으로 대화한다 (Step 6 비교�
   4. `?transport=polling`으로 열면 "폴링 상태" 패널과 기존 동작 그대로.
   5. `backend/logs/app.json`에서 `WS_ACCESS` 행(connect·frame·close, requestId, userId)과 핸드셰이크의 `ACCESS` 행(`/ws`, 101)을 찾는다. `/actuator/prometheus`에서 `chat_ws_sessions`, `chat_delivery_stage_seconds{stage,transport}`, `chat_delivery_total_seconds{transport}`를 본다.
 
-- [ ] **Step 3: 장애 가설 기록** — `docs/failure-lab.md` 표와 본문에 F43~F49(위 "예상되는 문제" 표)를 가설로 추가한다. 작업 중 새로 발견한 위험도 가설로만 추가한다. 작업 3 Step 6의 "기존 실험 조건 변화(전송마다 멤버 조회 1회 추가)"를 기록한다.
+- [ ] **Step 3: 장애 가설 기록** — `docs/failure-lab.md` 표와 본문에 F43~F49(위 "예상되는 문제" 표)를 가설로 추가한다. F50은 코드 리뷰 뒤 먼저 기록했으므로 재현 상태와 결정 항목을 유지한다. 작업 3 Step 6의 "기존 실험 조건 변화(전송마다 멤버 조회 1회 추가)"를 기록한다.
 
 - [ ] **Step 4: ADR 기록** — `docs/adr/<실행한 날짜>.md`에 "계획 7: WebSocket 서버 1대" 절을 추가하고 다음 빈 번호(ADR-129 예상)부터 기록한다(결정 / 이유 / 포기한 것). 순서: 사용자 결정 D1~D6(**특히 D5 AOP 로그 범위**: 접속·프레임·종료 로그와 전달 시간만 AOP로 하고 ACCESS·AUDIT·예외 로그는 그대로 둔 이유 세 가지 — 필터 밖 401·404 누락, 감사의 커밋 시점, 예외 중복 기록), 세부 #1~#12와 #7A·#7B(보완 내용 포함).
 
@@ -3479,9 +3480,9 @@ class SlowConsumerExperiment {
 ```
   - `meters.timer(name, tags)`는 작업 13에서 등록한 타이머를 같은 태그로 찾는다(없으면 새로 만들어 0으로 시작한다).
 
-- [ ] **Step 3: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.SlowConsumerExperiment'`. 예상(측정 전): baseline은 REST p50이 수십 ms 이하. stalled는 몇십~몇백 건 뒤 서버 송신 버퍼가 차서 push가 막히고, 보낸 사람의 REST 응답과 빠른 수신자의 도착이 함께 늦어진다. Tomcat의 블로킹 전송 시간 초과(기본 20초로 알고 있음, 확인 필요) 뒤에는 `IOException` → REST 500(F44)이 나오고, 느린 세션이 닫히면 다시 빨라진다.
+- [ ] **Step 3: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.ws.SlowConsumerExperiment'`. 예상(측정 전): baseline은 REST p50이 수십 ms 이하. stalled는 몇십~몇백 건 뒤 서버 송신 버퍼가 차서 push가 막히고, 보낸 사람의 REST 응답과 빠른 수신자의 도착이 함께 늦어진다. Tomcat 전송 시간 초과(기본값 확인 필요)로 push 예외가 나면 Spring의 `afterCompletion`에서 기록되고 REST는 저장 성공 201일 것으로 예상한다(F44). 전송 실패가 난 세션 뒤의 수신자는 push를 못 받을 수 있다(F50).
 
-- [ ] **Step 4: 멈추고 보고** — CSV 요약, 응답이 늦어지기 시작한 순번, 500 개수, `app.json`의 예외 종류를 측정값으로 보고한다. 해결 후보(비동기 전달, 세션별 송신 큐·시간 제한 등)는 7단계로 제안만 한다. 비동기를 고르면 이 실험과 같은 지표(`chat.delivery.stage{push}`, `chat.delivery.total`, REST 응답 시간)로 동기와 비교하는 작업을 따로 계획한다.
+- [ ] **Step 4: 멈추고 보고** — CSV 요약, 응답이 늦어지기 시작한 순번, HTTP 상태별 건수, `app.json`의 예외 종류, DB 저장 여부와 빠른 수신자의 누락 여부를 측정값으로 보고한다. 해결 후보(비동기 전달, 세션별 송신 큐·시간 제한 등)는 7단계로 제안만 한다. 비동기를 고르면 이 실험과 같은 지표(`chat.delivery.stage{push}`, `chat.delivery.total`, REST 응답 시간)로 동기와 비교하는 작업을 따로 계획한다.
 
 ---
 

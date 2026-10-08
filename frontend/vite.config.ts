@@ -12,6 +12,8 @@ export default defineConfig({
       // ADR-028: 브라우저는 한 주소하고만 통신하고 /api만 백엔드로 넘긴다
       // ADR-086: 백엔드 clientIp가 proxy의 X-Forwarded-For를 반영하는지 확인한다
       '/api': { target: 'http://localhost:8080', xfwd: true },
+      // 계획 7 세부 12: WebSocket 업그레이드도 같은 주소로 받아 백엔드로 넘긴다 (ADR-028)
+      '/ws': { target: 'ws://localhost:8080', ws: true, xfwd: true },
     },
   },
   test: {
