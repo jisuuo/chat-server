@@ -1,0 +1,80 @@
+# ADR-148: 별도 프로젝트와 볼륨으로 local DB를 건드리지 않고 같은 DB를 쓰는 앱 2대를 둔다.
+# 실행 전 backend/에서 ./gradlew bootJar, frontend/에서 npm run build
+name: chat-cluster
+
+x-app: &app
+  image: eclipse-temurin:21-jre
+  environment:
+    SPRING_PROFILES_ACTIVE: "${CLUSTER_PROFILE:-local},mysql"
+    SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/chat
+    SPRING_DATASOURCE_USERNAME: chat
+    SPRING_DATASOURCE_PASSWORD: chat
+    JAVA_TOOL_OPTIONS: "-XX:ActiveProcessorCount=2"
+    LOG_DIR: /app/logs
+  command: [java, -jar, /app/chat.jar]
+  cpus: 2
+  mem_limit: 1g
+  depends_on:
+    mysql:
+      condition: service_healthy
+  healthcheck:
+    test: [CMD-SHELL, "wget -qO- localhost:8080/actuator/health | grep -q UP"]
+    interval: 3s
+    timeout: 2s
+    retries: 40
+
+services:
+  mysql:
+    image: mysql:8.4.11
+    ports: ["33306:3306"]
+    environment:
+      MYSQL_DATABASE: chat
+      MYSQL_USER: chat
+      MYSQL_PASSWORD: chat
+      MYSQL_ROOT_PASSWORD: root
+      TZ: UTC
+    command: [--innodb-flush-log-at-trx-commit=1, --innodb-buffer-pool-size=256M]
+    cpus: 2
+    mem_limit: 1g
+    volumes: [cluster-mysql-data:/var/lib/mysql]
+    healthcheck:
+      test: [CMD, mysqladmin, ping, -h, 127.0.0.1, -uchat, -pchat]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app1:
+    <<: *app
+    ports: ["18081:8080"]
+    volumes:
+      - ../backend/build/libs/chat-0.0.1-SNAPSHOT.jar:/app/chat.jar:ro
+      # ADR-148: 두 서버의 로그 파일 롤링이 충돌하지 않게 분리한다.
+      - ../backend/logs/cluster/app1:/app/logs
+
+  app2:
+    <<: *app
+    ports: ["18082:8080"]
+    volumes:
+      - ../backend/build/libs/chat-0.0.1-SNAPSHOT.jar:/app/chat.jar:ro
+      - ../backend/logs/cluster/app2:/app/logs
+
+  nginx:
+    image: nginx:1.30.5-alpine
+    ports: ["18090:80"]
+    cpus: 1
+    mem_limit: 256m
+    depends_on:
+      app1: { condition: service_healthy }
+      app2: { condition: service_healthy }
+    volumes:
+      # ADR-154: 같은 구성에서 nginx 설정 파일을 바꿔 재현 조건을 비교한다.
+      - ./cluster/nginx/${NGINX_CONF:-naive}.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../frontend/dist:/usr/share/nginx/html:ro
+    healthcheck:
+      test: [CMD-SHELL, "wget -qO- 127.0.0.1/ >/dev/null"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+
+volumes:
+  cluster-mysql-data:

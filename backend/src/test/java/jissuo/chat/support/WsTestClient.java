@@ -1,6 +1,7 @@
 package jissuo.chat.support;
 
 import java.io.IOException;
+import java.net.URI;
 import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -11,6 +12,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import org.springframework.web.socket.WebSocketHttpHeaders;
 
 /** 서버가 보낸 텍스트 프레임을 큐에 모으는 테스트용 클라이언트. 실험에서도 쓴다. */
 public final class WsTestClient implements AutoCloseable {
@@ -24,7 +26,7 @@ public final class WsTestClient implements AutoCloseable {
     private final CompletableFuture<CloseStatus> closed = new CompletableFuture<>();
     private final WebSocketSession session;
 
-    private WsTestClient(int port, String query) throws Exception {
+    private WsTestClient(URI uri, WebSocketHttpHeaders headers) throws Exception {
         session = CLIENT.execute(new TextWebSocketHandler() {
             @Override
             protected void handleTextMessage(WebSocketSession s, TextMessage message) {
@@ -35,15 +37,19 @@ public final class WsTestClient implements AutoCloseable {
             public void afterConnectionClosed(WebSocketSession s, CloseStatus status) {
                 closed.complete(status);
             }
-        }, "ws://localhost:" + port + "/ws?" + query).get(5, TimeUnit.SECONDS);
+        }, headers, uri).get(5, TimeUnit.SECONDS);
     }
 
     public static WsTestClient connect(int port, long userId) throws Exception {
-        return new WsTestClient(port, "userId=" + userId);
+        return connect(URI.create("ws://localhost:" + port + "/ws?userId=" + userId), new WebSocketHttpHeaders());
     }
 
     public static WsTestClient connectRaw(int port, String query) throws Exception {
-        return new WsTestClient(port, query);
+        return connect(URI.create("ws://localhost:" + port + "/ws?" + query), new WebSocketHttpHeaders());
+    }
+
+    public static WsTestClient connect(URI uri, WebSocketHttpHeaders headers) throws Exception {
+        return new WsTestClient(uri, headers);
     }
 
     public void send(String json) throws IOException {
