@@ -1,6 +1,6 @@
 # 계획 7: WebSocket 서버 1대 구현 계획 (Step 2, 고도화 P7)
 
-> 실행 상태 (2026-10-08): 웨이브 1~9 완료. F3~F6 실험의 실제 결과와 한계는 [장애 보고서](../../reports/2026-10-08-plan7-websocket-failures.md)에 기록했다. 아래 작업 9~12의 예상 문구와 코드 예시는 계획 당시 기준이며, 서비스 보완은 아직 결정하지 않았다.
+> 실행 상태 (2026-10-08): 웨이브 1~9 완료. F3~F6 실험의 실제 결과와 한계는 [장애 보고서](../../reports/2026-10-08-plan7-websocket-failures.md)에 기록했다. 세션 저장소 동시성(F3)은 재현 후 ADR-142에 따라 보완하고 같은 실험을 3회 재실행했다. 아래 작업 9~12의 예상 문구와 코드 예시는 계획 당시 기준이다. F4~F6의 서비스 보완은 아직 결정하지 않았다.
 
 > **실행하는 에이전트에게**: 작업은 아래 "실행 순서와 병렬화"의 **웨이브 단위로 사용자 승인을 받고** 시작한다. 같은 웨이브의 작업은 동시에 진행할 수 있다. 웨이브가 끝나면 통합 확인을 하고 결과(테스트 출력 포함)를 보고한 뒤 멈춘다. **커밋하지 않는다** (사용자가 요청할 때만). 단계는 체크박스(`- [ ]`)로 추적한다. 장애 재현 작업(9~12)은 웨이브마다 멈추고 측정값과 예상을 나눠 보고한다.
 
@@ -3275,7 +3275,11 @@ class SessionRegistryExperiment {
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
 
     public void add(long userId, WebSocketSession session) {
-        sessions.computeIfAbsent(userId, id -> ConcurrentHashMap.newKeySet()).add(session);
+        sessions.compute(userId, (id, tabs) -> {
+            Set<WebSocketSession> updated = tabs == null ? ConcurrentHashMap.newKeySet() : tabs;
+            updated.add(session);
+            return updated;
+        });
     }
 
     public void remove(long userId, WebSocketSession session) {

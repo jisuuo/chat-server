@@ -28,7 +28,7 @@ public class WsMessagePusher implements MessagePusher {
         // ADR-131: 본문 전체를 한 번만 직렬화해 모든 탭에 같은 프레임을 보낸다
         TextMessage frame = new TextMessage(json.writeValueAsString(MessageFrame.of(MessageResponse.from(message))));
         for (long userId : userIds) {
-            // F3: 스레드 안전하지 않은 목록을 복사하지 않고 그대로 순회한다 (재현 전)
+            // ADR-142: 접속·종료와 겹친 순회는 안전하지만 그 순간 바뀐 탭의 포함 여부는 보장하지 않는다.
             for (WebSocketSession session : sessions.sessionsOf(userId)) {
                 sender.send(session, frame, origin);
             }
