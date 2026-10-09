@@ -1,5 +1,7 @@
 # 계획 8: 서버 2대와 nginx 구현 계획 (Step 3, 고도화 P8)
 
+**실행 상태 (2026-10-08):** 작업 0~8 완료. F8·F17은 재현 후 승인된 보완을 적용했고, F7은 재현·분석까지 완료했다. 최종 회귀는 백엔드 447건, 프론트 118건, Playwright 8건 통과했다. 조건과 남은 문제는 [계획 8 보고서](../../reports/2026-10-08-plan8-multi-server.md)에 기록했다. 커밋하지 않았다.
+
 > **실행하는 에이전트에게**: 작업은 아래 "실행 순서와 병렬화"의 **웨이브 단위로 사용자 승인을 받고** 시작한다. 같은 웨이브의 작업은 동시에 진행할 수 있다. 웨이브가 끝나면 통합 확인을 하고 결과(테스트 출력 포함)를 보고한 뒤 멈춘다. **커밋하지 않는다** (사용자가 요청할 때만 한다). 단계는 체크박스(`- [ ]`)로 추적한다. 장애 재현 작업(3, 5, 6)은 끝나면 멈추고 측정값과 예상을 나눠 보고한다. 보완 작업(4, 7)은 7단계 제안을 승인받은 뒤에만 시작한다.
 
 **목표:** 같은 MySQL을 쓰는 앱 2대를 nginx(라운드로빈) 뒤에 띄운다. 이 구성에서 다른 서버에 연결된 사용자가 메시지를 받지 못하는 문제(F7), 로드밸런서 뒤 WebSocket 연결 실패(F8), 재시작 때 재연결이 몰리는 문제(F17)를 재현한다. F8과 F17은 재현한 뒤 사용자와 결정해 보완한다. F7은 재현과 분석까지만 하고, 해결은 계획 9(Redis Pub/Sub)에서 한다.
@@ -123,14 +125,14 @@ CLAUDE.md                                     (작업 8) 현재 위치, 클러�
 
 **Files:** Modify `docs/adr/<실행일>.md`, `docs/failure-lab.md`
 
-- [ ] **Step 1: ADR 기록** — `## 계획 8: 서버 2대와 nginx` 절을 만들고 ADR-147부터 기존 표 형식(번호 | 결정 | 이유 | 버린 대안)으로 적는다.
+- [x] **Step 1: ADR 기록** — `## 계획 8: 서버 2대와 nginx` 절을 만들고 ADR-147부터 기존 표 형식(번호 | 결정 | 이유 | 버린 대안)으로 적는다.
   - 147 범위 (D1): 버린 대안은 "재현만", "Redis 전 임시 해결(서버 간 HTTP 중계·sticky)"
   - 148 compose 컨테이너 구성 (D2, 세부 1·2·3): 버린 대안은 "로컬 bootRun 2개", "둘 다"
   - 149 라운드로빈 (D3): 버린 대안은 `ip_hash`, `least_conn`(F54 보완 후보로 남김)
   - 150 **F17 규모: Java 실험 클라이언트 1,000개로 시작하고, 드러나지 않으면 승인받아 2,000·5,000개로 늘린다. k6 WebSocket은 Step 6에서 만든다** (D4, 사용자 요청). 이유: 기존 `experiment/ws` 자산을 쓰고 서버 지표와 함께 원인을 본다. 로컬 한 대에서 5,000개면 클라이언트 쪽 병목(파일 디스크립터, Docker 네트워크)이 섞인다. 버린 대안: k6 5,000개(새 스크립트, ADR-128과 범위가 겹침), 브라우저 관찰만
   - 151~ 승인된 세부 4~10 (분배 관찰, 프론트 제공, 지표, nginx 설정 교체, Origin 헤더, 실험 제어, F7 결정적 재현)
-- [ ] **Step 2: 가설 기록** — `failure-lab.md` 상태 표에 F51~F57을 `가설`로 추가하고, "다중 서버" 절에 위 "예상되는 문제" 표의 내용을 적는다. F7·F8 본문에 ADR-146(60초 재대조)과 ADR-144(10초 ping) 때문에 예상이 달라진 점을 덧붙인다.
-- [ ] **Step 3: 보고하고 멈춘다.**
+- [x] **Step 2: 가설 기록** — `failure-lab.md` 상태 표에 F51~F57을 `가설`로 추가하고, "다중 서버" 절에 위 "예상되는 문제" 표의 내용을 적는다. F7·F8 본문에 ADR-146(60초 재대조)과 ADR-144(10초 ping) 때문에 예상이 달라진 점을 덧붙인다.
+- [x] **Step 3: 보고하고 멈춘다.**
 
 ### 작업 1: 클러스터 구성 (compose, 최소 nginx, Prometheus 대상)
 
@@ -140,8 +142,8 @@ CLAUDE.md                                     (작업 8) 현재 위치, 클러�
 
 **Produces:** 서비스 이름 `mysql`, `app1`, `app2`, `nginx`. 환경 변수 `CLUSTER_PROFILE`(기본 `local`), `NGINX_CONF`(기본 `naive`). 포트 18090/18081/18082/33306.
 
-- [ ] **Step 1: nginx 태그 확인** — `docker pull nginx:stable-alpine && docker image inspect nginx:stable-alpine --format '{{index .Config.Env}}'`로 `NGINX_VERSION`을 확인하고 그 버전(`nginx:<버전>-alpine`)으로 고정한다. 기본 `worker_processes`·`worker_connections`도 `docker run --rm nginx:<버전>-alpine cat /etc/nginx/nginx.conf`로 확인해 일지에 "측정"으로 적는다(F55의 근거).
-- [ ] **Step 2: `infra/compose.cluster.yml`**
+- [x] **Step 1: nginx 태그 확인** — `docker pull nginx:stable-alpine && docker image inspect nginx:stable-alpine --format '{{index .Config.Env}}'`로 `NGINX_VERSION`을 확인하고 그 버전(`nginx:<버전>-alpine`)으로 고정한다. 기본 `worker_processes`·`worker_connections`도 `docker run --rm nginx:<버전>-alpine cat /etc/nginx/nginx.conf`로 확인해 일지에 "측정"으로 적는다(F55의 근거).
+- [x] **Step 2: `infra/compose.cluster.yml`**
 ```yaml
 # 계획 8: 같은 DB를 쓰는 앱 2대를 nginx 뒤에 둔다. 별도 프로젝트·볼륨이라 local DB를 건드리지 않는다.
 # 실행 전: cd backend && ./gradlew bootJar, cd frontend && npm run build
@@ -226,7 +228,7 @@ volumes:
   cluster-mysql-data:
 ```
 `eclipse-temurin:21-jre`에 `wget`이 없으면 healthcheck를 `curl -sf`로 바꾼다(Step 5에서 확인). 바꾼 경우 일지에 적는다.
-- [ ] **Step 3: `infra/cluster/nginx/naive.conf`** (F8 재현 조건. 흔한 최소 설정이다)
+- [x] **Step 3: `infra/cluster/nginx/naive.conf`** (F8 재현 조건. 흔한 최소 설정이다)
 ```nginx
 # ADR-034: 흔히 처음 쓰는 최소 설정 그대로 둔다. Upgrade·Host·X-Forwarded-For를 전달하지 않는다 (F8, F51, F52)
 upstream chat_backend {
@@ -255,16 +257,16 @@ server {
     }
 }
 ```
-- [ ] **Step 4: Prometheus 대상** — `infra/prometheus/prometheus.yml`의 `scrape_configs`에 기존 `chat` job과 같은 `metrics_path`·간격으로 job `chat-cluster`(`targets: ['host.docker.internal:18081', 'host.docker.internal:18082']`)를 추가한다.
-- [ ] **Step 5: 띄우고 확인**
+- [x] **Step 4: Prometheus 대상** — `infra/prometheus/prometheus.yml`의 `scrape_configs`에 기존 `chat` job과 같은 `metrics_path`·간격으로 job `chat-cluster`(`targets: ['host.docker.internal:18081', 'host.docker.internal:18082']`)를 추가한다.
+- [x] **Step 5: 띄우고 확인**
 ```bash
 cd backend && ./gradlew bootJar && cd ../frontend && npm run build && cd ..
 docker compose -f infra/compose.cluster.yml up -d --wait
 for i in 1 2 3 4; do curl -si localhost:18090/api/users -H 'X-User-Id: 1' | grep -i x-upstream; done
 ```
 예상: `X-Upstream`이 두 주소를 번갈아 보인다(라운드로빈). `http://localhost:18090`에서 화면이 뜬다. 연결 상태 패널은 F8 때문에 "끊김"과 재연결 횟수 증가를 보일 것으로 예상한다. **고치지 않는다.**
-- [ ] **Step 6: `infra/cluster/README.md`** — 사전 빌드 두 줄, 띄우기·내리기(`down -v`), 포트 표, `NGINX_CONF`·`CLUSTER_PROFILE` 사용법, 로그 위치(`backend/logs/cluster/app{1,2}`, `docker compose ... logs nginx`)를 적는다.
-- [ ] **Step 7: 보고하고 멈춘다.**
+- [x] **Step 6: `infra/cluster/README.md`** — 사전 빌드 두 줄, 띄우기·내리기(`down -v`), 포트 표, `NGINX_CONF`·`CLUSTER_PROFILE` 사용법, 로그 위치(`backend/logs/cluster/app{1,2}`, `docker compose ... logs nginx`)를 적는다.
+- [x] **Step 7: 보고하고 멈춘다.**
 
 ### 작업 2: 실험 지원 코드
 
@@ -299,11 +301,11 @@ final class ClusterHttp {
 }
 ```
 
-- [ ] **Step 1: `WsTestClient`에 URI·헤더 생성 메서드 추가** — 기존 생성자를 `(URI uri, WebSocketHttpHeaders headers)`를 받는 private 생성자로 바꾸고 `CLIENT.execute(handler, headers, uri)`를 부른다. 기존 `connect(int, long)`과 `connectRaw(int, String)`은 `URI.create("ws://localhost:" + port + "/ws?" + query)`와 빈 헤더로 이 생성자를 부른다. 공개 시그니처는 바꾸지 않는다.
-- [ ] **Step 2: `ClusterControl`** — 저장소 루트 기준 `infra/compose.cluster.yml`을 찾는다(Gradle 작업 디렉터리는 `backend/`이므로 `Path.of("..", "infra", "compose.cluster.yml")`). `ProcessBuilder(...).inheritIO()`가 아니라 출력을 읽어 실패 시 종료 코드와 출력을 담아 `IllegalStateException`을 던진다. `useNginx`는 `environment().put("NGINX_CONF", conf)`로 넘긴다. `assumeRunning`은 `HttpClient`로 2초 제한 GET을 보내고 예외면 `Assumptions.abort("클러스터가 떠 있지 않다: infra/cluster/README.md")`를 부른다.
-- [ ] **Step 3: `ClusterHttp`** — `support/ChatHttp`와 같은 방식(`HttpClient`, `X-User-Id`, 응답 `data` 파싱)으로 쓰고 `createUser`·`latest`·`upstream`만 더한다. `ChatHttp`는 고치지 않는다.
-- [ ] **Step 4: 확인** — `cd backend && ./gradlew test --tests 'jissuo.chat.message.api.ws.*'` 통과(`WsTestClient` 회귀). `./gradlew compileTestJava` 통과.
-- [ ] **Step 5: 보고하고 멈춘다.**
+- [x] **Step 1: `WsTestClient`에 URI·헤더 생성 메서드 추가** — 기존 생성자를 `(URI uri, WebSocketHttpHeaders headers)`를 받는 private 생성자로 바꾸고 `CLIENT.execute(handler, headers, uri)`를 부른다. 기존 `connect(int, long)`과 `connectRaw(int, String)`은 `URI.create("ws://localhost:" + port + "/ws?" + query)`와 빈 헤더로 이 생성자를 부른다. 공개 시그니처는 바꾸지 않는다.
+- [x] **Step 2: `ClusterControl`** — 저장소 루트 기준 `infra/compose.cluster.yml`을 찾는다(Gradle 작업 디렉터리는 `backend/`이므로 `Path.of("..", "infra", "compose.cluster.yml")`). `ProcessBuilder(...).inheritIO()`가 아니라 출력을 읽어 실패 시 종료 코드와 출력을 담아 `IllegalStateException`을 던진다. `useNginx`는 `environment().put("NGINX_CONF", conf)`로 넘긴다. `assumeRunning`은 `HttpClient`로 2초 제한 GET을 보내고 예외면 `Assumptions.abort("클러스터가 떠 있지 않다: infra/cluster/README.md")`를 부른다.
+- [x] **Step 3: `ClusterHttp`** — `support/ChatHttp`와 같은 방식(`HttpClient`, `X-User-Id`, 응답 `data` 파싱)으로 쓰고 `createUser`·`latest`·`upstream`만 더한다. `ChatHttp`는 고치지 않는다.
+- [x] **Step 4: 확인** — `cd backend && ./gradlew test --tests 'jissuo.chat.message.api.ws.*'` 통과(`WsTestClient` 회귀). `./gradlew compileTestJava` 통과.
+- [x] **Step 5: 보고하고 멈춘다.**
 
 ### 작업 3: F8 재현 — 최소 설정 nginx 뒤 WebSocket
 
@@ -311,12 +313,12 @@ final class ClusterHttp {
 
 **Files:** Create `backend/src/test/java/jissuo/chat/experiment/cluster/ProxyHandshakeExperiment.java`
 
-- [ ] **Step 1: 실험 작성** — `@Tag("experiment")`, Spring 컨텍스트 없음. `@BeforeAll`에서 `ClusterControl.assumeRunning()`.
+- [x] **Step 1: 실험 작성** — `@Tag("experiment")`, Spring 컨텍스트 없음. `@BeforeAll`에서 `ClusterControl.assumeRunning()`.
   - `naive_설정에서_핸드셰이크`: `ClusterControl.useNginx("naive")` → 사용자 1명 생성 → `WsTestClient.connect(URI.create("ws://localhost:18090/ws?userId=" + id), ClusterControl.browserHeaders())`를 10번 시도한다. 성공 수, 실패 예외 메시지(상태 코드 포함), 시도 시각 이후의 `ClusterControl.logs("nginx", t0)`에서 `/ws` 줄(상태·upstream)을 `ExperimentResults.record("cluster-f8-handshake", "conf,attempt,result,status,upstream", ...)`로 남긴다.
   - `naive_설정의_REST_clientIp`(F52): REST 한 번 → `backend/logs/cluster/app{1,2}/app.json`의 마지막 `ACCESS` 줄의 `clientIp`를 읽어 기록한다.
-- [ ] **Step 2: 실행** — `cd backend && ./gradlew experimentTest --tests 'jissuo.chat.experiment.cluster.ProxyHandshakeExperiment'`. 예상(측정 전): 10번 모두 실패한다. 앱은 `Upgrade` 없는 GET을 받아 400을 돌려줄 것으로 예상한다(정확한 코드는 측정한다). `clientIp`는 nginx 컨테이너 주소(172.x)다.
-- [ ] **Step 3: 브라우저 관찰** — `http://localhost:18090`에서 사용자 시작 → 방 입장. 연결 상태 패널의 재연결 횟수가 초마다 늘고 nginx 접근 로그에 `/ws` 실패가 쌓이는지 본다. 메시지 전송은 소켓이 열리지 않아 연결 오류 문구가 나올 것으로 예상한다. 결과는 "측정"으로 일지에 적는다.
-- [ ] **Step 4: 멈추고 보고** — 측정값과 예상을 나눠 보고한다. 원인 분석은 사용자와 함께 한다. 보완안(작업 4의 후보)은 7단계 형식으로 제안만 한다.
+- [x] **Step 2: 실행** — `cd backend && ./gradlew experimentTest --tests 'jissuo.chat.experiment.cluster.ProxyHandshakeExperiment'`. 예상(측정 전): 10번 모두 실패한다. 앱은 `Upgrade` 없는 GET을 받아 400을 돌려줄 것으로 예상한다(정확한 코드는 측정한다). `clientIp`는 nginx 컨테이너 주소(172.x)다.
+- [x] **Step 3: 브라우저 관찰** — `http://localhost:18090`에서 사용자 시작 → 방 입장. 연결 상태 패널의 재연결 횟수가 초마다 늘고 nginx 접근 로그에 `/ws` 실패가 쌓이는지 본다. 메시지 전송은 소켓이 열리지 않아 연결 오류 문구가 나올 것으로 예상한다. 결과는 "측정"으로 일지에 적는다.
+- [x] **Step 4: 멈추고 보고** — 측정값과 예상을 나눠 보고한다. 원인 분석은 사용자와 함께 한다. 보완안(작업 4의 후보)은 7단계 형식으로 제안만 한다.
 
 ### 작업 4: F8 보완 (작업 3 보고 뒤 승인된 안으로)
 
@@ -332,7 +334,7 @@ final class ClusterHttp {
 | `f8-host` | 위 + `proxy_set_header Host $host` | 403 (포트가 빠짐) |
 | `chat` | 위의 Host를 `$http_host`로 + `X-Forwarded-For`/`Proto` + 명시적 `proxy_read_timeout 60s` | 101 |
 
-- [ ] **Step 1: `chat.conf`**
+- [x] **Step 1: `chat.conf`**
 ```nginx
 upstream chat_backend {
     server app1:8080;
@@ -382,9 +384,9 @@ server {
 }
 ```
 `f8-upgrade.conf`·`f8-host.conf`는 위 표의 차이만 두고 나머지는 `naive.conf`와 같다.
-- [ ] **Step 2: 실험 메서드 추가** — `설정별_핸드셰이크`: `naive`, `f8-upgrade`, `f8-host`, `chat`을 차례로 `useNginx`하고 작업 3과 같은 10회 시도를 기록한다. `chat_설정의_유휴_유지`: 연결 1개를 180초 동안 유지하고 닫힘 이벤트와 시각을 기록한다(예상: 닫히지 않음). 대조로 `proxy_read_timeout 5s`만 다른 `f8-timeout5.conf`로 같은 측정을 한다(예상: ping 간격 10초보다 짧아 약 5초 뒤 닫힘). 이 대조로 heartbeat가 유휴 끊김을 막는다는 것을 확인한다.
-- [ ] **Step 3: 실행·확인** — 같은 `experimentTest` 명령. 브라우저 `http://localhost:18090`에서 연결 상태 "연결됨", 두 탭 송수신(같은 서버일 때), `/api` 접근 로그의 `clientIp`가 브라우저 쪽 주소인지 확인한다.
-- [ ] **Step 4: 기본값 교체·기록** — `compose.cluster.yml`의 `${NGINX_CONF:-naive}`를 `${NGINX_CONF:-chat}`으로 바꾼다. 측정 결과로 ADR(F8 보완)을 추가하고 F8·F51·F52 상태를 바꾼다. 보고하고 멈춘다.
+- [x] **Step 2: 실험 메서드 추가** — `설정별_핸드셰이크`: `naive`, `f8-upgrade`, `f8-host`, `chat`을 차례로 `useNginx`하고 작업 3과 같은 10회 시도를 기록한다. `chat_설정의_유휴_유지`: 연결 1개를 180초 동안 유지하고 닫힘 이벤트와 시각을 기록한다(예상: 닫히지 않음). 대조로 `proxy_read_timeout 5s`만 다른 `f8-timeout5.conf`로 같은 측정을 한다(예상: ping 간격 10초보다 짧아 약 5초 뒤 닫힘). 이 대조로 heartbeat가 유휴 끊김을 막는다는 것을 확인한다.
+- [x] **Step 3: 실행·확인** — 같은 `experimentTest` 명령. 브라우저 `http://localhost:18090`에서 연결 상태 "연결됨", 두 탭 송수신(같은 서버일 때), `/api` 접근 로그의 `clientIp`가 브라우저 쪽 주소인지 확인한다.
+- [x] **Step 4: 기본값 교체·기록** — `compose.cluster.yml`의 `${NGINX_CONF:-naive}`를 `${NGINX_CONF:-chat}`으로 바꾼다. 측정 결과로 ADR(F8 보완)을 추가하고 F8·F51·F52 상태를 바꾼다. 보고하고 멈춘다.
 
 ### 작업 5: F7 재현 — 다른 서버에 붙은 멤버
 
@@ -392,7 +394,7 @@ server {
 
 **Files:** Create `experiment/cluster/{TwoServerFanoutExperiment,ClusterFanoutExperiment}.java`
 
-- [ ] **Step 1: 결정적 재현 (`TwoServerFanoutExperiment`)** — `ReconnectLossExperiment`와 같은 머리(`@Tag("experiment")`, `@SpringBootTest(RANDOM_PORT)`, `@ActiveProfiles("mysql")`, `MySqlContainerSupport.register`). `@BeforeAll`이 아니라 테스트 안에서 서버 2를 띄운다.
+- [x] **Step 1: 결정적 재현 (`TwoServerFanoutExperiment`)** — `ReconnectLossExperiment`와 같은 머리(`@Tag("experiment")`, `@SpringBootTest(RANDOM_PORT)`, `@ActiveProfiles("mysql")`, `MySqlContainerSupport.register`). `@BeforeAll`이 아니라 테스트 안에서 서버 2를 띄운다.
 ```java
 ConfigurableApplicationContext server2 = new SpringApplicationBuilder(ChatApplication.class)
         .profiles("mysql")
@@ -404,10 +406,10 @@ int port2 = server2.getEnvironment().getProperty("local.server.port", Integer.cl
 ```
 시나리오: 방에 A·B·S(보낸 사람). A는 서버 1, B는 서버 2에 연결한다. S가 서버 1의 REST로 1건, 서버 2의 REST로 1건 보낸다. 각 클라이언트가 3초 동안 받은 id, DB 저장 여부(`ChatHttp.get`), 두 서버의 `chat.delivery.total`·`chat.delivery.failed` 증가분(F53)을 `ExperimentResults.record("cluster-f7-two-servers", ...)`로 남긴다. 끝나면 `server2.close()`.
 예상(측정 전): A는 서버 1로 보낸 메시지만, B는 서버 2로 보낸 메시지만 받는다. 두 메시지 모두 DB에는 있다. 두 서버 모두 실패 지표는 0이다.
-- [ ] **Step 2: nginx 자연 분배 (`ClusterFanoutExperiment`)** — `ClusterControl.assumeRunning()`. 사용자 21명(보낸 사람 1 + 수신자 20)을 만들고 한 방에 넣는다. 수신자 20명은 nginx로 연결한다(라운드로빈이라 약 10명씩). 보낸 사람이 REST로 20건을 보내고 응답의 `X-Upstream`을 기록한다. 5초 뒤 수신자별 받은 건수와 받은 메시지의 저장 서버를 집계해 `cluster-f7-round-robin`에 남긴다. 수신자가 어느 서버에 붙었는지는 받은 메시지의 저장 서버로 추정하고, 받은 것이 없으면 `unknown`으로 둔다.
+- [x] **Step 2: nginx 자연 분배 (`ClusterFanoutExperiment`)** — `ClusterControl.assumeRunning()`. 사용자 21명(보낸 사람 1 + 수신자 20)을 만들고 한 방에 넣는다. 수신자 20명은 nginx로 연결한다(라운드로빈이라 약 10명씩). 보낸 사람이 REST로 20건을 보내고 응답의 `X-Upstream`을 기록한다. 5초 뒤 수신자별 받은 건수와 받은 메시지의 저장 서버를 집계해 `cluster-f7-round-robin`에 남긴다. 수신자가 어느 서버에 붙었는지는 받은 메시지의 저장 서버로 추정하고, 받은 것이 없으면 `unknown`으로 둔다.
 예상(측정 전): 수신자마다 약 10건(절반)을 받는다. 받은 메시지는 모두 자기 서버에 저장된 것이다.
-- [ ] **Step 3: 브라우저 관찰** — 두 탭(A, B)을 `http://localhost:18090`에 연다. 개발자 도구 Network에서 `/ws`의 `X-Upstream`이 다른 서버인지 확인한다(같으면 B 탭을 새로고침해 다시 분배받는다). A가 보낸 메시지가 B에게 늦게 보이는지, 몇 초 뒤에 보이는지(60초 재대조, ADR-146) 측정한다. 결과는 "측정"으로 일지에 적는다.
-- [ ] **Step 4: 실행·멈추고 보고** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.cluster.*Fanout*'`. 해결은 계획 9(Redis)다. 이번에는 분석과 기록만 한다.
+- [x] **Step 3: 브라우저 관찰** — 두 탭(A, B)을 `http://localhost:18090`에 연다. 개발자 도구 Network에서 `/ws`의 `X-Upstream`이 다른 서버인지 확인한다(같으면 B 탭을 새로고침해 다시 분배받는다). A가 보낸 메시지가 B에게 늦게 보이는지, 몇 초 뒤에 보이는지(60초 재대조, ADR-146) 측정한다. 결과는 "측정"으로 일지에 적는다.
+- [x] **Step 4: 실행·멈추고 보고** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.cluster.*Fanout*'`. 해결은 계획 9(Redis)다. 이번에는 분석과 기록만 한다.
 
 ### 작업 6: F17 재현 — 앱 1대 재시작 때 재연결 폭주
 
@@ -430,16 +432,16 @@ final class StormClient implements AutoCloseable {
 ```
 - `StormClient`는 `chatSocket.ts`를 따라 한다. 닫히면 `policy.delay(attempt)` 뒤 다시 연결한다. 연결에 실패해도 같은 정책으로 다시 시도한다. 다시 열리면 `ClusterHttp.latest`를 한 번 보내 복구 조회(ADR-145의 첫 페이지)를 흉내 낸다. 새 메시지가 없는 조건이라 `recover.ts`의 다음 페이지 조회는 일어나지 않는다고 가정하고, 이 가정을 보고서에 적는다. REST는 가상 스레드 실행기로 보낸다.
 
-- [ ] **Step 1: 준비** — `CLUSTER_PROFILE=bench docker compose -f infra/compose.cluster.yml up -d --wait`(ADR-022). 맥의 파일 디스크립터 한도(`ulimit -n`, `launchctl limit maxfiles`)를 기록한다. 테스트 JVM이 연결 1,000개 이상을 열 수 있는지 먼저 100개로 확인한다.
-- [ ] **Step 2: 실험** — 방 100개 × 멤버 10명 = 사용자 1,000명을 REST로 만든다(`ClusterHttp`). `Fixed(1s)`로 1,000개를 연결하고, 서버별 `chat_ws_sessions`(18081/18082의 `/actuator/prometheus`)가 합계 1,000이 될 때까지 기다린다. 이 시점의 기준 조회 p99를 따로 잰다. 조건 두 가지를 차례로 실행한다: (a) `ClusterControl.restart("app1")`(graceful 종료), (b) `ClusterControl.kill("app1")` 뒤 `start("app1")`. 조건마다 다음을 `cluster-f17-storm`에 기록한다.
+- [x] **Step 1: 준비** — `CLUSTER_PROFILE=bench docker compose -f infra/compose.cluster.yml up -d --wait`(ADR-022). 맥의 파일 디스크립터 한도(`ulimit -n`, `launchctl limit maxfiles`)를 기록한다. 테스트 JVM이 연결 1,000개 이상을 열 수 있는지 먼저 100개로 확인한다.
+- [x] **Step 2: 실험** — 방 100개 × 멤버 10명 = 사용자 1,000명을 REST로 만든다(`ClusterHttp`). `Fixed(1s)`로 1,000개를 연결하고, 서버별 `chat_ws_sessions`(18081/18082의 `/actuator/prometheus`)가 합계 1,000이 될 때까지 기다린다. 이 시점의 기준 조회 p99를 따로 잰다. 조건 두 가지를 차례로 실행한다: (a) `ClusterControl.restart("app1")`(graceful 종료), (b) `ClusterControl.kill("app1")` 뒤 `start("app1")`. 조건마다 다음을 `cluster-f17-storm`에 기록한다.
   - 초 단위 핸드셰이크 시도·성공·실패 수(최대값), 실패 메시지별 수(F57)
   - 첫 닫힘부터 1,000개가 모두 열릴 때까지 걸린 시간
   - 복구 조회의 p50/p99·실패 수, 기준 대비 배수
   - 1초 간격으로 읽은 app2의 `hikaricp_connections_pending` 최대값(F56)
   - 복구 뒤 60초 시점의 서버별 `chat_ws_sessions`(F54)
   - 측정 구간의 nginx 오류 로그 중 `worker_connections` 줄 수(F55)
-- [ ] **Step 3: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.cluster.ReconnectStormExperiment'`. 예상(측정 전): (a)에서 약 500개가 1초 뒤 거의 동시에 재연결을 시도한다. app1이 내려가 있는 동안의 시도는 nginx가 app2로 넘기거나 502로 실패한다. 복구 뒤에도 연결 대부분이 app2에 남는다(F54). 복구 조회 p99는 기준보다 커지지만 1,000개 규모에서 풀 포화(F56)까지 갈지는 모르겠다.
-- [ ] **Step 4: 멈추고 보고** — 측정값과 예상을 나눠 보고한다. 폭주 신호가 없으면(실패 0, 조회 p99가 기준의 2배 미만, Hikari 대기 0) 2,000·5,000개로 늘릴지 묻는다(ADR-150). 보완 후보는 7단계 형식으로 제안만 한다. 지금 생각하는 후보는 지수 대기 + 전체 지터(full jitter), 복구 조회 지연, `least_conn`, 재시작 전 연결 분산 종료다.
+- [x] **Step 3: 실행** — `./gradlew experimentTest --tests 'jissuo.chat.experiment.cluster.ReconnectStormExperiment'`. 예상(측정 전): (a)에서 약 500개가 1초 뒤 거의 동시에 재연결을 시도한다. app1이 내려가 있는 동안의 시도는 nginx가 app2로 넘기거나 502로 실패한다. 복구 뒤에도 연결 대부분이 app2에 남는다(F54). 복구 조회 p99는 기준보다 커지지만 1,000개 규모에서 풀 포화(F56)까지 갈지는 모르겠다.
+- [x] **Step 4: 멈추고 보고** — 측정값과 예상을 나눠 보고한다. 폭주 신호가 없으면(실패 0, 조회 p99가 기준의 2배 미만, Hikari 대기 0) 2,000·5,000개로 늘릴지 묻는다(ADR-150). 보완 후보는 7단계 형식으로 제안만 한다. 지금 생각하는 후보는 지수 대기 + 전체 지터(full jitter), 복구 조회 지연, `least_conn`, 재시작 전 연결 분산 종료다.
 
 ### 작업 7: F17 보완 (작업 6 보고 뒤 승인된 안으로)
 
@@ -449,7 +451,7 @@ final class StormClient implements AutoCloseable {
 
 **Files:** Create `frontend/src/realtime/reconnectDelay.ts(+test)` · Modify `frontend/src/realtime/chatSocket.ts(+test)`, `experiment/cluster/StormClient.java`(정책 `FullJitter` 추가), `ReconnectStormExperiment.java`(정책별 실행)
 
-- [ ] **Step 1: 실패하는 테스트** — `reconnectDelay.test.ts`
+- [x] **Step 1: 실패하는 테스트** — `reconnectDelay.test.ts`
 ```ts
 import { describe, expect, it } from 'vitest'
 import { reconnectDelay } from './reconnectDelay'
@@ -468,8 +470,8 @@ describe('reconnectDelay', () => {
 })
 ```
 `chatSocket.test.ts`에 추가: `createChatSocket(userId, { open, random: () => 0.5 })`로 만들고, 연결 실패가 두 번 이어지면 두 번째 재연결이 `vi.advanceTimersByTime(1000)`에서 일어나는지 본다(attempt 1 → 2초 × 0.5). 열린 뒤 다시 끊기면 대기가 500ms로 돌아가는지 본다.
-- [ ] **Step 2: 실패 확인** — `cd frontend && npx vitest run src/realtime` → FAIL(모듈 없음)
-- [ ] **Step 3: 구현**
+- [x] **Step 2: 실패 확인** — `cd frontend && npx vitest run src/realtime` → FAIL(모듈 없음)
+- [x] **Step 3: 구현**
 ```ts
 // reconnectDelay.ts
 const BASE_MS = 1000
@@ -481,23 +483,23 @@ export function reconnectDelay(attempt: number, random: () => number = Math.rand
 }
 ```
 `chatSocket.ts`: `RECONNECT_DELAY_MS`를 지우고 `Options`에 `random?: () => number`를 더한다. `let attempt = 0`을 둔다. `onopen`에서 `attempt = 0`으로 되돌린다. `onclose`에서 `setTimeout(..., reconnectDelay(attempt++, random))`을 쓴다. ADR-137 주석은 새 ADR 번호로 바꾼다. `RECONNECT_DELAY_MS`를 쓰는 곳은 `grep -rn RECONNECT_DELAY_MS frontend/src frontend/e2e`로 찾아 함께 고친다.
-- [ ] **Step 4: 통과 확인** — `npx vitest run && npx tsc -b && npm run lint`
-- [ ] **Step 5: 재측정** — `StormClient`에 같은 공식의 `record FullJitter(Duration base, Duration cap, RandomGenerator random) implements ReconnectPolicy`를 더한다. `ReconnectStormExperiment`를 `Fixed(1s)`와 `FullJitter`로 같은 조건 (a)·(b)에서 실행해 작업 6과 같은 열에 기록한다. 예상(측정 전): 초당 핸드셰이크 최대값은 줄고, 전원이 다시 연결될 때까지의 시간은 늘어난다.
-- [ ] **Step 6: 기록·보고** — ADR(F17 보완)을 추가하고 F17 상태를 바꾼다. 쏠림(F54)이 남으면 가설로 남겨 둔다. 보고하고 멈춘다.
+- [x] **Step 4: 통과 확인** — `npx vitest run && npx tsc -b && npm run lint`
+- [x] **Step 5: 재측정** — `StormClient`에 같은 공식의 `record FullJitter(Duration base, Duration cap, RandomGenerator random) implements ReconnectPolicy`를 더한다. `ReconnectStormExperiment`를 `Fixed(1s)`와 `FullJitter`로 같은 조건 (a)·(b)에서 실행해 작업 6과 같은 열에 기록한다. 예상(측정 전): 초당 핸드셰이크 최대값은 줄고, 전원이 다시 연결될 때까지의 시간은 늘어난다.
+- [x] **Step 6: 기록·보고** — ADR(F17 보완)을 추가하고 F17 상태를 바꾼다. 쏠림(F54)이 남으면 가설로 남겨 둔다. 보고하고 멈춘다.
 
 ### 작업 8: E2E, 브라우저 확인, 기록
 
 > 웨이브 7 · 선행: 7
 
-- [ ] **Step 1: 회귀** — `cd backend && ./gradlew test`, `cd frontend && npx vitest run && npx tsc -b && npm run lint && npm run e2e`(기존 Vite + bootRun 구성).
-- [ ] **Step 2: 클러스터 브라우저 확인** — `npm run build` 뒤 클러스터를 다시 띄운다(`NGINX_CONF` 기본 `chat`). 두 탭이 다른 서버일 때 F7 지연, 같은 서버일 때 즉시 수신을 확인한다. `docker compose restart app1` 때 재연결 간격이 흩어지는지 연결 상태 패널과 nginx 로그로 확인한다.
-- [ ] **Step 3: 문서**
+- [x] **Step 1: 회귀** — `cd backend && ./gradlew test`, `cd frontend && npx vitest run && npx tsc -b && npm run lint && npm run e2e`(기존 Vite + bootRun 구성).
+- [x] **Step 2: 클러스터 브라우저 확인** — `npm run build` 뒤 클러스터를 다시 띄운다(`NGINX_CONF` 기본 `chat`). 두 탭이 다른 서버일 때 F7 지연, 같은 서버일 때 즉시 수신을 확인한다. `docker compose restart app1` 때 재연결 간격이 흩어지는지 연결 상태 패널과 nginx 로그로 확인한다.
+- [x] **Step 3: 문서**
   - `docs/reports/<실행일>-plan8-multi-server.md`: F8·F7·F17 조건, 측정값, 예상과의 차이, 한계(Java 클라이언트는 브라우저가 아님, 복구 조회는 한 페이지만 가정, 로컬 단일 머신)
   - `docs/failure-lab.md` 상태, `docs/journal/<실행일>.md`, `docs/README.md` 현재 상태·로드맵, `docs/design/architecture.md`의 nginx 구성
   - `CLAUDE.md` 현재 위치와 클러스터 명령(`docker compose -f infra/compose.cluster.yml up -d --wait`, 사전 빌드)
   - 코드·설정 주석의 `계획 8 세부 #n`을 ADR 번호로 바꾼다
   - 이 계획서 머리에 실행 상태를 적는다
-- [ ] **Step 4: 보고하고 멈춘다.** 커밋은 사용자가 요청할 때만 한다.
+- [x] **Step 4: 보고하고 멈춘다.** 커밋은 사용자가 요청할 때만 한다.
 
 ## 검증 요약
 

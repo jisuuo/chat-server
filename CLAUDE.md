@@ -8,7 +8,7 @@ HTTP 폴링 → WebSocket → 서버 2대 → Redis로 확장하는 채팅 서�
 
 - 기술: Java 21, Spring Boot 4.1.1, Gradle Kotlin DSL(단일 모듈, 패키지 `jissuo.chat`), `JdbcClient`·JPA(설정으로 선택), Flyway, MySQL 8.4.11 / PostgreSQL 18.6 (DB는 측정 후 선택, ADR-003)
 - 쓰지 않는 것: Spring Security, H2(잠금·커밋 동작이 실제 DB와 달라서)
-- 현재 위치: Step 2, 계획 7(WebSocket 서버 1대) 기능과 F3~F6 장애 재현 완료. F3 세션 저장소 동시성은 보완·재측정했고(ADR-142), F4~F6의 보완 방식은 결정 전이다. 기본 채팅은 WebSocket이며 `?transport=polling`은 비교용으로 유지한다. 계획 6 UI 개편과 JDBC·JPA 기능 계약 검증 완료. Membership 중복 입장 실패(F34)는 해결했다. W1~W5 부하·기동·힙 비교는 나머지 계획 뒤로 연기했다(ADR-128). 기본 저장소는 JDBC이며 MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106). 결과는 `docs/reports/2026-10-08-jdbc-vs-jpa.md`와 `docs/reports/2026-10-08-plan7-websocket-failures.md`에 있다.
+- 현재 위치: Step 3, 계획 8의 nginx·앱 2대 구성과 F8·F17 보완 완료. 다른 앱에 연결된 수신자의 즉시 push 누락(F7)은 계획 9 Redis 단계에서 다룬다. 기본 채팅은 WebSocket이고 `?transport=polling`은 비교용이다. 계획 7의 F3~F6·F49·F50 보완 경로도 구현했다. W1~W5 부하·기동·힙 비교는 나머지 계획 뒤로 연기했다(ADR-128). 기본 저장소는 JDBC이며 MySQL 스키마 A 유지, DB 선택 보류(ADR-105·106). 결과는 `docs/reports/2026-10-08-plan8-multi-server.md`, `docs/reports/2026-10-08-plan7-websocket-failures.md`, `docs/reports/2026-10-08-jdbc-vs-jpa.md`에 있다.
 
 ## 명령어
 
@@ -31,6 +31,13 @@ npm test
 npm run e2e       # Playwright가 local,mysql 백엔드와 Vite를 자동 기동할 수 있음
 # URL에 ?transport=polling을 붙이면 기존 폴링으로 대화한다 (Step 6 비교용)
 
+# 서버 2대 클러스터 (저장소 루트에서, 사전 빌드 필요)
+(cd backend && ./gradlew bootJar)
+(cd frontend && npm run build)
+docker compose -f infra/compose.cluster.yml up -d --wait  # nginx 18090, app1 18081, app2 18082, MySQL 33306
+docker compose -f infra/compose.cluster.yml logs nginx
+# CLUSTER_PROFILE=bench는 재연결 부하 실험, NGINX_CONF=chat은 기본 설정
+
 # 모니터링 (저장소 루트에서, 앱은 backend/bootRun으로 따로 실행)
 docker compose -f infra/compose.monitoring.yml --profile metrics up -d --wait  # Prometheus 19090, Grafana 13000
 docker compose -f infra/compose.monitoring.yml --profile logs up -d --wait     # Elasticsearch 19200, Kibana 15601, Filebeat
@@ -49,6 +56,7 @@ docker compose -f infra/compose.monitoring.yml --profile logs up -d --wait     #
 - **Flyway**: DB별 스크립트가 따로 있다. `backend/src/main/resources/db/migration/{mysql,postgresql}`
 - **메시지 조회**: 커서 방식(`after`=폴링, `before`=위로 스크롤, 둘 다 없으면 최신). 응답은 항상 오래된 것 → 최신 순이고 `hasMore`를 포함한다. 방 목록은 `rooms.last_message_id`(비정규화 컬럼)로 정렬하고, 전송 트랜잭션 안에서 조건부 UPDATE로 갱신한다.
 - **관측**: 최상위 필터가 요청 ID를 생성해 MDC·응답 헤더에 넣고 접근 로그를 남긴다. 메트릭은 `/actuator/prometheus`, 로그는 `backend/logs/app.json`·`audit.json`에 쌓인다.
+- **클러스터**: nginx가 `/api`·`/ws`를 앱 2대에 라운드로빈으로 보낸다. 앱별 로그는 `backend/logs/cluster/app{1,2}`다. WebSocket 세션은 JVM 로컬이므로 다른 앱의 수신자에게 즉시 push되지 않는다(F7). 프론트는 ADR-159의 전체 지터로 재접속 시각을 나누며, 서버 간 연결 재분배는 하지 않는다.
 - **감사**: 서비스가 이벤트를 발행하고, `audit`은 성공을 커밋 후, 실패를 트랜잭션 종료 뒤에 수신한다.
 
 ## 작업 규칙 (사용자가 정함, `docs/collab-rules.md`)

@@ -9,7 +9,7 @@ HTTP 폴링으로 시작해 WebSocket, 다중 서버, Redis로 확장하는 채�
 - React·TypeScript 채팅 화면: 사용자 선택, 방 목록·생성, 메시지 조회·전송, WebSocket 실시간 수신 (`?transport=polling` 비교 가능)
 - Prometheus·Grafana 메트릭과 Elasticsearch·Kibana 로그 수집
 
-현재 단계는 단일 서버 WebSocket을 사용하는 Step 2입니다. F3 세션 동시성, F4 느린 수신자 격리, F5 half-open 감지, F6 재연결 누락, F49 첫 조회 중 누락, F50 열린 연결의 push 누락에 대한 복구 경로를 구현했습니다. 열린 방은 60초마다 보이는 메시지 범위를 재조회하며, 그보다 오래된 낮은 ID의 늦은 커밋은 여전히 놓칠 수 있습니다. 메시지 스키마는 MySQL 스키마 A를 유지하며, 최종 DB 선택은 보류 중입니다. JPA는 메시지 스키마 A를 지원하고, JDBC·JPA 성능 비교는 나머지 계획 완료 후 진행합니다. 자세한 진행 상황과 결정 근거는 [문서 목록](docs/README.md)과 [계획 7](docs/superpowers/plans/2026-10-08-plan7-websocket.md)에 있습니다.
+현재 단계는 같은 MySQL을 쓰는 앱 2대와 nginx의 Step 3입니다. WebSocket 연결 설정(F8)과 재연결 시점 집중(F17)을 재현·보완했습니다. 다른 앱에 연결된 수신자에게는 즉시 push되지 않는 문제(F7)가 남아 있으며, 열린 방의 60초 재조회가 지연 표시할 뿐입니다. 서버 간 전달은 다음 Redis 단계에서 다룹니다. 메시지 스키마는 MySQL 스키마 A를 유지하고 DB 선택과 JDBC·JPA 성능 비교는 보류 중입니다. 조건과 측정값은 [계획 8 보고서](docs/reports/2026-10-08-plan8-multi-server.md), 결정 근거는 [문서 목록](docs/README.md)에 있습니다.
 
 ## 로컬 실행
 
@@ -31,6 +31,16 @@ npm run dev
 ```
 
 채팅 화면은 [http://localhost:5173](http://localhost:5173), 백엔드는 `http://localhost:8080`에서 열립니다. PostgreSQL로 실행하려면 백엔드 프로필의 `mysql`을 `postgres`로 바꿉니다.
+
+서버 2대 구성을 보려면 먼저 jar와 프론트 정적 파일을 빌드합니다. 다음 명령은 저장소 루트에서 실행합니다.
+
+```bash
+(cd backend && ./gradlew bootJar)
+(cd frontend && npm run build)
+docker compose -f infra/compose.cluster.yml up -d --wait
+```
+
+클러스터 화면은 [http://localhost:18090](http://localhost:18090)입니다. app1·app2 직접 포트는 18081·18082이고 클러스터 MySQL은 33306입니다. 설정 교체와 로그 위치는 [클러스터 실행 안내](infra/cluster/README.md)를 따릅니다.
 
 ## Grafana
 

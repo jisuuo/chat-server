@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { RECONNECT_DELAY_MS, createChatSocket, socketUrl } from './chatSocket'
+import { createChatSocket, socketUrl } from './chatSocket'
 import type { ServerFrame } from './chatSocket'
 
 class FakeWebSocket {
@@ -90,18 +90,39 @@ describe('chatSocket', () => {
     expect(socket.stats().received).toBe(1)
   })
 
-  it('끊기면 정확히 1초 뒤 다시 연결하고 횟수와 종료 코드를 남긴다', () => {
-    const socket = createChatSocket(7, { url: URL_7, open })
+  it('끊기면 각 연결의 무작위 대기 뒤 다시 연결하고 종료 코드를 남긴다', () => {
+    const socket = createChatSocket(7, { url: URL_7, open, random: () => 0.5 })
     socket.start()
     latest().accept()
     latest().drop(1006)
     expect(socket.stats()).toMatchObject({ state: 'closed', lastCloseCode: 1006, reconnects: 0 })
 
-    vi.advanceTimersByTime(RECONNECT_DELAY_MS - 1)
+    vi.advanceTimersByTime(499)
     expect(FakeWebSocket.instances).toHaveLength(1)
     vi.advanceTimersByTime(1)
     expect(FakeWebSocket.instances).toHaveLength(2)
     expect(socket.stats()).toMatchObject({ state: 'connecting', reconnects: 1 })
+  })
+
+  it('연속 실패 시 대기 범위를 넓히고 성공 뒤 초기 범위로 되돌린다', () => {
+    const socket = createChatSocket(7, { url: URL_7, open, random: () => 0.5 })
+    socket.start()
+    latest().drop(1006)
+    vi.advanceTimersByTime(500)
+    expect(FakeWebSocket.instances).toHaveLength(2)
+
+    latest().drop(1006)
+    vi.advanceTimersByTime(999)
+    expect(FakeWebSocket.instances).toHaveLength(2)
+    vi.advanceTimersByTime(1)
+    expect(FakeWebSocket.instances).toHaveLength(3)
+
+    latest().accept()
+    latest().drop(1006)
+    vi.advanceTimersByTime(499)
+    expect(FakeWebSocket.instances).toHaveLength(3)
+    vi.advanceTimersByTime(1)
+    expect(FakeWebSocket.instances).toHaveLength(4)
   })
 
   it('stop하면 닫고 다시 연결하지 않으며, 다시 start할 수 있다', () => {
@@ -111,7 +132,7 @@ describe('chatSocket', () => {
     socket.stop()
     expect(latest().readyState).toBe(3)
     expect(socket.stats().state).toBe('closed')
-    vi.advanceTimersByTime(RECONNECT_DELAY_MS * 5)
+    vi.advanceTimersByTime(30_000)
     expect(FakeWebSocket.instances).toHaveLength(1)
 
     socket.start()

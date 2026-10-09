@@ -133,7 +133,7 @@ HTTP 요청 → RequestLogContextFilter (서버 UUID, IP, MDC, 응답 헤더)
 chat-server/
  ├─ backend/      Spring Boot 4.1.1, Java 21, Gradle Kotlin DSL, 기본 패키지 jissuo.chat
  ├─ frontend/     Vite + React + TypeScript (/api 요청은 backend로 proxy)
- ├─ infra/        docker compose (DB, 모니터링, 이후 nginx/Redis)
+ ├─ infra/        docker compose (DB, 모니터링, nginx 클러스터; Redis는 이후 단계)
  ├─ db/           다른 환경에서도 쓸 수 있는 테스트용 SQL
  └─ docs/         진행 기록, ERD
 ```
@@ -148,12 +148,21 @@ chat-server/
 개발: 브라우저 → Vite 개발 서버(5173) ─┬─ 화면: 직접 응답 (실시간 변환, 저장 즉시 반영 HMR)
                                       ├─ /api: 8080으로 전달
                                       └─ /ws: WebSocket Upgrade를 8080으로 전달
-운영: 브라우저 → nginx ─┬─ 화면: 빌드된 정적 파일 (vite build 결과)
-                       └─ /api: Spring 백엔드로 전달 (Step 3에서 서버 2대로 분배)
+클러스터 실험: 브라우저 → nginx(18090) ─┬─ 화면: 빌드된 정적 파일
+                                      ├─ /api: app1·app2에 라운드로빈
+                                      └─ /ws: WebSocket Upgrade 후 app1·app2 중 한 곳에 연결
+                                                └─ 두 앱은 같은 MySQL 사용
 ```
 - 개발은 Vite: 고친 코드를 바로 보는 것이 중요하다 (작업실).
 - 운영은 nginx: 완성 파일을 빠르게 많은 사용자에게 주고, 여러 서버로 분배하고, WebSocket과 HTTPS를 처리한다 (매장). Vite 개발 서버는 공식적으로 운영용이 아니다.
 - 한계: proxy를 거치면 백엔드가 보는 요청 IP가 proxy의 IP가 된다. 감사 로그(ADR-023)에 실제 IP를 남기려면 `X-Forwarded-For`를 읽도록 설정한다. `/ws`에는 `ws: true`를 설정했다(ADR-141). 로컬 Chrome·Playwright에서 Vite proxy 뒤 핸드셰이크 101과 메시지 push를 확인했고 Origin 403은 관찰되지 않았다. k6 부하 테스트는 브라우저가 아니라 CORS와 무관하며 백엔드에 직접 요청한다.
+
+### 서버 2대와 nginx (ADR-147~159)
+
+- `infra/compose.cluster.yml`은 별도 MySQL과 app1·app2, nginx를 실행한다. 기본 `chat.conf`는 `/api`와 `/ws`를 nginx 기본 라운드로빈으로 분배하고 정적 화면을 제공한다. 공개 포트는 18090, 앱 직접 확인 포트는 18081·18082다. 실행 명령과 설정 교체는 [`infra/cluster/README.md`](../../infra/cluster/README.md)에 둔다.
+- `/ws`는 `Upgrade`·`Connection`과 원래 `Host`, `X-Forwarded-Proto`·`Port`를 전달한다. 18090 외부 포트를 빠뜨리면 Spring의 같은 origin 검사에서 403이다(F8). `X-Forwarded-For`는 nginx가 관측한 주소로 덮어쓴다(ADR-158). 외부 포트를 변경하면 설정의 전달 포트도 바꾼다.
+- DB와 방 멤버 정보는 공유하지만 `WsSessionRegistry`, outbound queue, heartbeat 상태는 JVM별이다. 저장 서버는 다른 앱의 WebSocket에 push하지 못한다(F7). 브라우저의 60초 재조회로 뒤늦게 보일 수 있고, 서버별 전달 성공 지표에는 이 누락이 드러나지 않는다(F53). 서버 간 실시간 전달은 계획 9에서 다룬다.
+- 브라우저가 끊기면 `floor(Math.random() × min(30초, 1초 × 2^연속실패횟수))` 뒤 다시 연결한다. 연결 성공 시 실패 횟수를 0으로 돌리고 누락 메시지 조회를 즉시 시작한다(ADR-159). 재접속 시각은 분산되지만 이미 연결된 소켓은 앱 사이에서 재분배되지 않는다(F54).
 
 ### 계획 4 프론트엔드 구현과 직접 확인 (ADR-081 ~ 087)
 
